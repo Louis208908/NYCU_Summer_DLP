@@ -29,21 +29,22 @@ def plot(epoch,train,test,net,act_fcn):
 
 
 class trainer():
-    def __init__(self,epochs, network_type, dropout_rate,device):
+    def __init__(self, network_type, epochs, learning_rate, dropout_rate, device):
         self.epochs = epochs;
         self.network_type = network_type;
         self.droupout_rate = dropout_rate;
         self.device = device
+        self.lr = learning_rate
 
         self.modelList = list();
         if(network_type == "EEGNET"):
-            model_relu = EEGNet("relu", self.droupout_rate).to(device);
-            model_lrelu = EEGNet("leaky_relu", self.droupout_rate).to(device);
-            model_elu = EEGNet("elu", self.droupout_rate).to(device);
+            model_relu = EEGNet("relu",learning_rate, self.droupout_rate).to(device);
+            model_lrelu = EEGNet("leaky_relu",learning_rate, self.droupout_rate).to(device);
+            model_elu = EEGNet("elu",learning_rate, self.droupout_rate).to(device);
         elif(network_type == "DeepConv"):
-            model_relu = DeepConv("relu", self.droupout_rate).to(device);
-            model_lrelu = DeepConv("leaky_relu", self.droupout_rate).to(device);
-            model_elu = DeepConv("elu", self.droupout_rate).to(device);
+            model_relu = DeepConv("relu",learning_rate, self.droupout_rate).to(device);
+            model_lrelu = DeepConv("leaky_relu",learning_rate, self.droupout_rate).to(device);
+            model_elu = DeepConv("elu",learning_rate, self.droupout_rate).to(device);
 
         self.modelList.append(model_relu);
         self.modelList.append(model_lrelu);
@@ -60,16 +61,16 @@ class trainer():
             model.evaluate(self.device,testing_loader);
 
     def train_evaluate(self, training, testing):
-        # print("now training network: " + str(self.network_type))
+        print("now training network: " + str(self.network_type))
         # fw = open("./record.csv","a");
         for id, model in enumerate(self.modelList):
             print("now using activation fcn type: " + model.activation_type)
             best_epoch , best_acc,epochs ,train_acc, test_acc = model.train_and_eval(self.device, training, testing, self.epochs)
             # fw.write("{:11s}, {:10s}, {:13.1E}, {:7.4f},{:7.4f} ,{:10d}, {:9.4f}\n".format(
             #     self.network_type, model.activation_type, self.lr, self.momentum, self.droupout_rate, best_epoch, best_acc))
-            if best_acc > 0.87:
-                print("Best epoch: " + str(best_epoch));
-                print("Best_acc: " + str(best_acc));
+            # if best_acc > 0.87:
+            print("Best epoch: " + str(best_epoch));
+            print("Best_acc: " + str(best_acc));
                 
             plot(epochs,train_acc,test_acc,self.network_type,model.activation_type);
         plt.legend(["ReLU train", "ReLU test", "Leaky_ReLU train", "Leaky_ReLU test", "ELU train", "ELU test"])    
@@ -88,12 +89,12 @@ if __name__ == "__main__":
 
 
     train_data, train_label, test_data, test_label = dataloader.read_bci_data();
-    train_loader, test_loader = dataloader.load_data(train_data,train_label, test_data, test_label,64,64);
+    train_loader, test_loader = dataloader.load_data(train_data,train_label, test_data, test_label,32,64);
 
     plt.figure(figsize=(15, 12))
     # for _ in range(10):
-    # model_trainer = trainer(300,"EEGNET",0.25,device);
-    model_trainer = trainer(300,"DeepConv",0.55,device);
+        # model_trainer = trainer("EEGNET", 300, 1e-3, 0.4, device)
+    model_trainer = trainer("DeepConv",300,5e-4,0.6,device);
     model_trainer.train_evaluate(train_loader, test_loader)
 
 

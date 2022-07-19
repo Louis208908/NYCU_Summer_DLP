@@ -22,7 +22,7 @@ if __name__ == "__main__":
     train_data, train_label, test_data, test_label = dataloader.read_bci_data();
     train_loader, test_loader = dataloader.load_data(train_data,train_label, test_data, test_label,64,1080);
     # model.load("EEGNET_relu_875.pt")
-    model = torch.load("EEGNET_leaky_relu_87.68518518518519.pt")
+    model = torch.load("../model_depository/EEGNET_leaky_relu_89.07407407407408.pt")
 
 
     model = model.to(device)

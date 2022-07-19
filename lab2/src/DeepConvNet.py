@@ -5,7 +5,7 @@ import torch
 
 
 class DeepConv(nn.Module):
-    def __init__(self, activation_type,momentum ,dropout_rate = 0.5):
+    def __init__(self, activation_type,lr ,dropout_rate = 0.5):
         #   droupout_rate Pr{模型中的某些node不被activation fcn 激活，希望可以以此減少overfit出現的機率}
         super(DeepConv, self).__init__()
         self.activation_type = activation_type
@@ -19,7 +19,7 @@ class DeepConv(nn.Module):
             self.activation_fcn = nn.LeakyReLU()
 
         self.dropout_rate = dropout_rate
-        self.momentum = momentum;
+        self.learning_rate  = lr;
 
         self.conv0 = nn.Conv2d(1, 25, kernel_size = (1, 5))
 
@@ -99,7 +99,7 @@ class DeepConv(nn.Module):
     def train_and_eval(self, device, training, testing, epoch):
         loss_fcn = nn.CrossEntropyLoss()
         # optim = torch.optim.Adam(self.parameters(), lr=lr, weight_decay = 0.01)
-        optim = torch.optim.Adam(self.parameters(), lr = 0.002)
+        optim = torch.optim.Adam(self.parameters(), lr = self.learning_rate, weight_decay=0.001)
         best_epoch = 0
         best_acc = 0
         epochs, train_accs, test_accs = list(), list(), list()

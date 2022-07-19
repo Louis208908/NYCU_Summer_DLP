@@ -4,16 +4,17 @@ import torch
 import copy
 
 class EEGNet(nn.Module):
-    def __init__(self, activation_type, dropout_rate = 0.25):   
+    def __init__(self, activation_type,lr ,dropout_rate = 0.25):   
         #   droupout_rate Pr{模型中的某些node不被activation fcn 激活，希望可以以此減少overfit出現的機率}
         super(EEGNet, self).__init__();
 
         self.activation_type = activation_type;
+        self.learning_rate = lr
 
         if(activation_type == "relu"):
             self.activation_fcn = nn.ReLU();
         elif(activation_type == "elu"):
-            self.activation_fcn = nn.ELU();
+            self.activation_fcn = nn.ELU(alpha = 0.8);
         elif(activation_type == "leaky_relu"):
             self.activation_fcn = nn.LeakyReLU();
 
@@ -80,7 +81,7 @@ class EEGNet(nn.Module):
     def train_and_eval(self, device, training, testing, epoch):
         loss_fcn = nn.CrossEntropyLoss()
         # optim = torch.optim.Adam(self.parameters(), lr=lr, weight_decay = 0.01)
-        optim = torch.optim.Adam(self.parameters())
+        optim = torch.optim.Adam(self.parameters(), lr = self.learning_rate)
         best_epoch = 0
         best_acc = 0
         epochs, train_accs, test_accs = list(), list(), list()
@@ -117,7 +118,7 @@ class EEGNet(nn.Module):
                 best_acc = test_acc
                 best_epoch = i
                 if test_acc > 0.87:
-                    fileName = "./" + "EEGNET_" + self.activation_type + "_" + str(test_acc * 100.0) + ".pt"
+                    fileName = "../model_depository/" + "EEGNET_" + self.activation_type + "_" + str(test_acc * 100.0) + ".pt"
                     # state_dict = copy.deepcopy(self.state_dict())
                     torch.save(self,fileName)
                     # self.evaluate(device,testing)
