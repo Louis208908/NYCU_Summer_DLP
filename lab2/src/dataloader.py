@@ -42,8 +42,8 @@ def load_data(train_data,train_label, test_data, test_label, training_batch, tes
     training_dataset = TensorDataset(train_data,train_label);
     testing_dataset = TensorDataset(test_data, test_label);
     
-    train_dataLoader = DataLoader(dataset = training_dataset, batch_size = training_batch, shuffle = True);
-    test_dataLoader = DataLoader(dataset = testing_dataset, batch_size = testing_batch, shuffle = False);
+    train_dataLoader = DataLoader(dataset = training_dataset, batch_size = training_batch, shuffle = True, num_workers = 4);
+    test_dataLoader = DataLoader(dataset = testing_dataset, batch_size = testing_batch, shuffle = False, num_workers = 4);
 
     return train_dataLoader, test_dataLoader
 

@@ -93,8 +93,8 @@ if __name__ == "__main__":
 
     plt.figure(figsize=(15, 12))
     # for _ in range(10):
-        # model_trainer = trainer("EEGNET", 300, 1e-3, 0.4, device)
-    model_trainer = trainer("DeepConv",300,5e-4,0.6,device);
+    model_trainer = trainer("EEGNET", 300, 1e-3, 0.4, device)
+    # model_trainer = trainer("DeepConv",300,5e-4,0.6,device);
     model_trainer.train_evaluate(train_loader, test_loader)
 
 

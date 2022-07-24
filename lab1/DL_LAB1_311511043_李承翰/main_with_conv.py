@@ -364,10 +364,10 @@ if __name__ == "__main__":
     # model_xor = NN(2,150,1,"sigmoid", "xor",0.5,"momentum",0.95);
 
     # using linear model
-    # model_linear = NN(2, 4, 1,"sigmoid", "linear",0.05);
-    # input_dataX, input_dataY = model_linear.data_loader.generate_fcn(1000);
-    # epochs,losses,accuracies,prediction = model_linear.train(15000,input_dataX, input_dataY);
-    # show_result(input_dataX,input_dataY,prediction,epochs,losses,accuracies,"Linear data");
+    model_linear = NN(2, 4, 1,"sigmoid", "linear",0.5);
+    input_dataX, input_dataY = model_linear.data_loader.generate_fcn(1000);
+    epochs,losses,accuracies,prediction = model_linear.train(10000,input_dataX, input_dataY);
+    show_result(input_dataX,input_dataY,prediction,epochs,losses,accuracies,"Linear data");
 
     # using xor model
     input_dataX2, input_dataY2 = model_xor.data_loader.generate_fcn()
@@ -380,33 +380,33 @@ if __name__ == "__main__":
     code below is used to visualize the validation prediction v.s ground truth
     '''
 
-    # validate_linear_X, validate_linear_Y = model_linear.data_loader.generate_fcn(1000);
-    # predict_linear_Y = model_linear.forward_propagate(validate_linear_X);
-    #validating linear model
+    validate_linear_X, validate_linear_Y = model_linear.data_loader.generate_fcn(1000);
+    predict_linear_Y = model_linear.forward_propagate(validate_linear_X);
+    # validating linear model
 
     validate_xor_X, validate_xor_Y = model_xor.data_loader.generate_fcn()
     predict_xor_Y = model_xor.forward_propagate(validate_xor_X)
     #validating xor model
 
-    # predict_linear_Ys = np.zeros(predict_linear_Y.shape);
-    # for i in range(validate_linear_Y.shape[0]):
-    #     if validate_linear_Y.shape[0] > 100:
-    #         if i % 100 == 0:
-    #             print("linear prediction: {:.4f}, label: {:1d}, actual: {:1d}".format(float(predict_linear_Y[i]), int(predict_linear_Y[i] >= 0.5) * 1 , int(validate_linear_Y[i])));
+    predict_linear_Ys = np.zeros(predict_linear_Y.shape);
+    for i in range(validate_linear_Y.shape[0]):
+        if validate_linear_Y.shape[0] > 100:
+            if i % 100 == 0:
+                print("linear prediction: {:.4f}, label: {:1d}, actual: {:1d}".format(float(predict_linear_Y[i]), int(predict_linear_Y[i] >= 0.5) * 1 , int(validate_linear_Y[i])));
 
-    # predict_xor_Ys = np.zeros(predict_xor_Y.shape);
-    # for i in range(validate_xor_Y.shape[0]):
-    #     print("xor prediction: {:.4f}, label: {:1d}, actual: {:1d}".format(float(predict_xor_Y[i]), int(predict_xor_Y[i] >= 0.5) * 1 , int(validate_xor_Y[i])));
+    predict_xor_Ys = np.zeros(predict_xor_Y.shape);
+    for i in range(validate_xor_Y.shape[0]):
+        print("xor prediction: {:.4f}, label: {:1d}, actual: {:1d}".format(float(predict_xor_Y[i]), int(predict_xor_Y[i] >= 0.5) * 1 , int(validate_xor_Y[i])));
 
     '''
     code below is used to get validation accuracy
     '''
-    # predict_linear_Ys[np.absolute(predict_linear_Y >= 0.5)] = 1;
-    # predict_linear_Ys[np.absolute(predict_linear_Y < 0.5)] = 0;
-    # accuracy = (predict_linear_Ys == validate_linear_Y).sum() / validate_linear_Y.shape[0]
-    # print("Linear Validate accuracies: " + str(accuracy));
+    predict_linear_Ys[np.absolute(predict_linear_Y >= 0.5)] = 1;
+    predict_linear_Ys[np.absolute(predict_linear_Y < 0.5)] = 0;
+    accuracy = (predict_linear_Ys == validate_linear_Y).sum() / validate_linear_Y.shape[0]
+    print("Linear Validate accuracies: " + str(accuracy));
 
-    # predict_xor_Ys[np.absolute(predict_xor_Y >= 0.5)] = 1;
-    # predict_xor_Ys[np.absolute(predict_xor_Y < 0.5)] = 0;
-    # accuracy = (predict_xor_Ys == validate_xor_Y).sum() / validate_xor_Y.shape[0]
-    # print("XOR Validate accuracies: " + str(accuracy));
+    predict_xor_Ys[np.absolute(predict_xor_Y >= 0.5)] = 1;
+    predict_xor_Ys[np.absolute(predict_xor_Y < 0.5)] = 0;
+    accuracy = (predict_xor_Ys == validate_xor_Y).sum() / validate_xor_Y.shape[0]
+    print("XOR Validate accuracies: " + str(accuracy));

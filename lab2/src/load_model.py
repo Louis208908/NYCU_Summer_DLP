@@ -17,13 +17,10 @@ def model_evaluation(model,test,device):
 
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # model = EEGNet("relu", 0.4, 0.2);
-    # print(model.type)
+
     train_data, train_label, test_data, test_label = dataloader.read_bci_data();
     train_loader, test_loader = dataloader.load_data(train_data,train_label, test_data, test_label,64,1080);
-    # model.load("EEGNET_relu_875.pt")
-    model = torch.load("../model_depository/EEGNET_leaky_relu_89.07407407407408.pt")
+    model = torch.load("../model_depository/EEGNET_leaky_relu_89.07407407407408.pt").to(device)
 
-
-    model = model.to(device)
+    # model = model.to(device)
     print(model.evaluate(device, test_loader))
