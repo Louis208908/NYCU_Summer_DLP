@@ -114,3 +114,286 @@ def init_weights(m):
     elif classname.find('BatchNorm') != -1:
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
+def is_sequence(arg):
+    return (not hasattr(arg, "strip") and
+            not type(arg) is np.ndarray and
+            not hasattr(arg, "dot") and
+            (hasattr(arg, "__getitem__") or
+            hasattr(arg, "__iter__")))
+
+def image_tensor(inputs, padding=1):
+    # assert is_sequence(inputs)
+    assert len(inputs) > 0
+    # print(inputs)
+
+    # if this is a list of lists, unpack them all and grid them up
+    if is_sequence(inputs[0]) or (hasattr(inputs, "dim") and inputs.dim() > 4):
+        images = [image_tensor(x) for x in inputs]
+        if images[0].dim() == 3:
+            c_dim = images[0].size(0)
+            x_dim = images[0].size(1)
+            y_dim = images[0].size(2)
+        else:
+            c_dim = 1
+            x_dim = images[0].size(0)
+            y_dim = images[0].size(1)
+
+        result = torch.ones(c_dim,
+                            x_dim * len(images) + padding * (len(images)-1),
+                            y_dim)
+        for i, image in enumerate(images):
+            result[:, i * x_dim + i * padding :
+                   (i+1) * x_dim + i * padding, :].copy_(image)
+
+        return result
+
+    # if this is just a list, make a stacked image
+    else:
+        images = [x.data if isinstance(x, torch.autograd.Variable) else x
+                  for x in inputs]
+        # print(images)
+        if images[0].dim() == 3:
+            c_dim = images[0].size(0)
+            x_dim = images[0].size(1)
+            y_dim = images[0].size(2)
+        else:
+            c_dim = 1
+            x_dim = images[0].size(0)
+            y_dim = images[0].size(1)
+
+        result = torch.ones(c_dim,
+                            x_dim,
+                            y_dim * len(images) + padding * (len(images)-1))
+        for i, image in enumerate(images):
+            result[:, :, i * y_dim + i * padding :
+                   (i+1) * y_dim + i * padding].copy_(image)
+        return result
+
+def make_image(tensor):
+    tensor = tensor.cpu().clamp(0, 1)
+    if tensor.size(0) == 1:
+        tensor = tensor.expand(3, tensor.size(1), tensor.size(2))
+    # pdb.set_trace()
+    # return Image.fromarray((tensor.numpy()))
+    # print(tensor.numpy().dtype)
+    return misc.toimage(tensor.numpy(), high=255*tensor.max(), channel_axis=0)
+
+def save_gif(filename, inputs, duration=0.25):
+    images = []
+    for tensor in inputs:
+        img = image_tensor(tensor, padding=0)
+        img = img.cpu()
+        img = img.transpose(0,1).transpose(1,2).clamp(0,1)
+        images.append(img.numpy())
+    imageio.mimsave(filename, images, duration=duration)
+
+def save_image(filename, tensor):
+    img = make_image(tensor)
+    img.save(filename)
+
+def save_tensors_image(filename, inputs, padding=1):
+    images = image_tensor(inputs, padding)
+    return save_image(filename, images)
+
+
+def plot_pred(x, cond, modules, epoch, args):
+    # raise NotImplementedError
+
+    x = x.float()
+
+    nsample = 5
+    gen_seq = [[] for i in range(nsample)]
+    gt_seq = [x[i] for i in range(len(x))]
+
+    h_seq = [modules['encoder'](x[i]) for i in range(args.n_past)]
+    for s in range(nsample):
+        modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
+        gen_seq[s].append(x[0])
+        x_in = x[0]
+        for i in range(1, args.n_eval):
+
+            c = cond[:, i, :].float()
+
+            if args.last_frame_skip or i < args.n_past:   
+                h, skip = h_seq[i-1]
+                h = h.detach()
+            elif i < args.n_past:
+                h, _ = h_seq[i-1]
+                h = h.detach()
+            
+            if i < args.n_past:
+                z_t, _, _ = modules['posterior'](h_seq[i][0])
+                modules['frame_predictor'](torch.cat([h, z_t, c], 1)) 
+                x_in = x[i]
+                gen_seq[s].append(x_in)
+            else:
+                z_t = torch.cuda.FloatTensor(args.batch_size, args.z_dim).normal_()
+                h = modules['frame_predictor'](torch.cat([h, z_t, c], 1)).detach()
+                x_in = modules['decoder']([h, skip]).detach()
+                gen_seq[s].append(x_in)
+
+    to_plot = []
+    gifs = [ [] for t in range(args.n_eval) ]
+    nrow = min(args.batch_size, 10)
+    for i in range(nrow):
+        # ground truth sequence
+        row = [] 
+        # for t in range(args.n_eval):
+        for t in range(args.batch_size):
+            row.append(gt_seq[t][i])
+        to_plot.append(row)
+
+        for s in range(nsample):
+            row = []
+            # for t in range(args.n_eval):
+            for t in range(args.batch_size):
+                row.append(gen_seq[s][t][i]) 
+            to_plot.append(row)
+        # for t in range(args.n_eval):
+        for t in range(args.batch_size):
+            row = []
+            row.append(gt_seq[t][i])
+            for s in range(nsample):
+                row.append(gen_seq[s][t][i])
+            gifs[t].append(row)
+
+    fname = '%s/gen/sample_%d.png' % (args.log_dir, epoch) 
+    save_tensors_image(fname, to_plot)
+
+    fname = '%s/gen/sample_%d.gif' % (args.log_dir, epoch) 
+    save_gif(fname, gifs)
+
+
+def plot_rec(x, cond, modules, epoch, args):
+    # raise NotImplementedError
+
+    x = x.float()
+
+    modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
+    modules['posterior'].hidden = modules['posterior'].init_hidden()
+    gen_seq = []
+    gen_seq.append(x[0])
+    x_in = x[0]
+    h_seq = [modules['encoder'](x[i]) for i in range(args.n_past+args.n_future)]
+    for i in range(1, args.n_past+args.n_future):
+
+        c = cond[:, i, :].float()
+
+        h_target = h_seq[i][0].detach()
+        if args.last_frame_skip or i < args.n_past:   
+            h, skip = h_seq[i-1]
+        else:
+            h, _ = h_seq[i-1]
+        h = h.detach()
+        z_t, mu, logvar = modules['posterior'](h_target)
+        if i < args.n_past:
+            modules['frame_predictor'](torch.cat([h, z_t, c], 1)) 
+            gen_seq.append(x[i])
+        else:
+            h_pred = modules['frame_predictor'](torch.cat([h, z_t, c], 1)).detach()
+            x_pred = modules['decoder']([h_pred, skip]).detach()
+            gen_seq.append(x_pred)
+   
+    to_plot = []
+    nrow = min(args.batch_size, 10)
+    for i in range(nrow):
+        row = []
+        for t in range(args.n_past+args.n_future):
+            row.append(gen_seq[t][i]) 
+        to_plot.append(row)
+    fname = '%s/gen/rec_%d.png' % (args.log_dir, epoch) 
+    save_tensors_image(fname, to_plot)
+
+
+def pred(x, cond, modules, args, device):
+    # raise NotImplementedError
+
+    x = x.float()
+    # print('x',x.dtype, x.shape)
+
+    gen_seq = []
+    modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
+    modules['posterior'].hidden = modules['posterior'].init_hidden()
+    x_in = x[:, 0]
+    for i in range(1, args.n_eval):
+        # x_in = x[:,i-1]
+
+        c = cond[:, i, :].float()
+
+        h = modules['encoder'](x_in)
+        if args.last_frame_skip or i < args.n_past:   
+            h, skip = h
+        else:
+            h, _ = h
+        h = h.detach()
+        if i < args.n_past:
+            h_target = modules['encoder'](x[:,i])[0].detach()
+            _, z_t, _ = modules['posterior'](h_target)
+            # z_t, _, _ = modules['posterior'](h_target)
+        else:
+            z_t = torch.cuda.FloatTensor(args.batch_size, args.z_dim).normal_() 
+        if i < args.n_past:
+            modules['frame_predictor'](torch.cat([h, z_t, c], 1))
+            x_in = x[:, i]
+        else:
+            h = modules['frame_predictor'](torch.cat([h, z_t, c], 1)).detach()
+            x_in = modules['decoder']([h, skip]).detach()
+            gen_seq.append(x_in.data.cpu().numpy())
+  
+    gen_seq = torch.tensor(np.array(gen_seq))
+    # print('gen_seq', gen_seq.dtype, gen_seq.shape)
+    gen_seq = gen_seq.permute(1,0,2,3,4)
+    
+    return gen_seq
+
+
+
+def plot_kl(x):
+
+    fig = plt.figure(figsize=(10,8))
+    plt.plot(range(len(x)), x)           
+    plt.xlabel('Epochs')
+    plt.ylabel('KL loss')
+    plt.savefig('KL.png')
+
+def plot_psnr(x):
+
+    fig = plt.figure(figsize=(10,8))
+    plt.plot(range(len(x)), x)           
+    plt.xlabel('Epochs')
+    plt.ylabel('PSNR')
+    plt.savefig('PSNR.png')
+
+def plot_result(KLD, MSE, LOSS, BETA, TFR, epoch, args):
+
+    fig=plt.figure()
+    ratio = plt.subplot()
+    value = ratio.twinx()
+
+    l1, = ratio.plot(BETA, color='red', linestyle='dashed')
+
+    l2, = ratio.plot(TFR, color='orange', linestyle='dashed')
+
+    l3, = value.plot(KLD, color='blue')
+
+    l4, = value.plot(MSE, color='green')
+
+    l5, = value.plot(LOSS, color='cyan')
+
+    # x_sparse = np.linspace(0, epoch, np.size(PSNR))
+    # l6 = value.scatter(x_sparse, PSNR, color='yellow')
+
+    
+    ratio.set_xlabel('Iterations')
+    ratio.set_ylabel("ratio")
+    value.set_ylabel('Loss')
+    plt.title("Training loss / ratio curve")
+    plt.legend([l1, l2, l3, l4, l5], ["kl_beta", "tfr", "KLD", "mse", "loss"])
+    plt.savefig('plot_{a}.png'.format(a = epoch))  
+
+
+def gif_generate(fp_in, fp_out):
+    imgs = (Image.open(f) for f in sorted(glob.glob(fp_in)))
+    img = next(imgs)
+    img.save(fp=fp_out, format='GIF', append_images=imgs,
+             save_all=True, duration=200, loop=0)
