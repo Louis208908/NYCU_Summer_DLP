@@ -15,7 +15,8 @@ from tqdm import tqdm
 from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
-from utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred
+from utils import init_weights, kl_criterion, plot_pred, plot_rec, finn_eval_seq, pred, plot_psnr, plot_kl, mse_metric, plot_result
+from PIL import Image
 
 torch.backends.cudnn.benchmark = True
 
@@ -25,8 +26,8 @@ def parse_args():
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
     parser.add_argument('--batch_size', default=12, type=int, help='batch size')
     parser.add_argument('--log_dir', default='./logs/fp', help='base directory to save logs')
-    parser.add_argument('--model_dir', default='', help='base directory to save logs')
-    parser.add_argument('--data_root', default='./data/processed_data', help='root directory for data')
+    parser.add_argument('--model_dir', default='./NYCU_Summer_DLP/lab4/model_depository', help='base directory to save logs')
+    parser.add_argument('--data_root', default='./lab4/processed_data', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
     parser.add_argument('--niter', type=int, default=300, help='number of epochs to train for')
     parser.add_argument('--epoch_size', type=int, default=600, help='epoch size')
@@ -49,12 +50,12 @@ def parse_args():
     parser.add_argument('--beta', type=float, default=0.0001, help='weighting on KL to prior')
     parser.add_argument('--num_workers', type=int, default=4, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
-    parser.add_argument('--cuda', default=False, action='store_true')  
+    parser.add_argument('--cuda', default=True, action='store_true')  
 
     args = parser.parse_args()
     return args
 
-def train(x, cond, modules, optimizer, kl_anneal, args):
+def train(x, cond, modules, optimizer, kl_anneal, args,device):
     modules['frame_predictor'].zero_grad()
     modules['posterior'].zero_grad()
     modules['encoder'].zero_grad()
@@ -66,27 +67,68 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
     mse = 0
     kld = 0
     use_teacher_forcing = True if random.random() < args.tfr else False
-    for i in range(1, args.n_past + args.n_future):
-        raise NotImplementedError
+    x = x.to(device)
+    cond = cond.to
 
+    h_seq = [modules['encoder']](x[i]) for i in range(args.n_past+args.n_future)]
+    train_result = []
+    origin_result = []    
+    for i in range(1, args.n_past + args.n_future):
+        # raise NotImplementedError
+
+        h_target, _ = h_seq[i]
+
+        if args.last_frame_skip or i < args.n_past:	
+            h_in, skip = h_seq[i - 1]
+        else:
+            if use_teacher_forcing:
+                h_in, _ = h_seq[ i - 1]
+            else:
+                h_in, _ =  modules['encoder'](x_pred)
+        z_t, mu, logvar = modules['posterior'](h_target)
+        lstim_in = torch.cat([h_in,z_t,cond[i - 1]], dim = 1)
+        g_t = modules['frame_predictor'](lstm_in)
+        x_pred = modules['decoder']([g_t,skip])
+        mse += nn.MSELoss(x[i], x_pred)
+        kld += kl_criterion(mu,logvar,args)
     beta = kl_anneal.get_beta()
     loss = mse + kld * beta
     loss.backward()
-
-    optimizer.step()
+    optimizer.module.step()
 
     return loss.detach().cpu().numpy() / (args.n_past + args.n_future), mse.detach().cpu().numpy() / (args.n_past + args.n_future), kld.detach().cpu().numpy() / (args.n_future + args.n_past)
 
 class kl_annealing():
     def __init__(self, args):
         super().__init__()
-        raise NotImplementedError
+        # raise NotImplementedError
+
+        self.args = args
+        self.beta = self.args.beta
+        self.kl_anneal_cyclical = self.args.kl_anneal_cyclical
+        self.kl_anneal_ratio = self.args.kl_anneal_ratio
+        self.kl_anneal_cycle = self.args.kl_anneal_cycle
+        if self.kl_anneal_cyclical:
+            self.period = int(self.args.niter / self.kl_anneal_cycle)
+        else:
+            self.period = self.args.niter
     
     def update(self):
-        raise NotImplementedError
+        # raise NotImplementedError
+        if (self.args.epoch % self.period) <= (self.period / self.kl_anneal_ratio):
+			## Reset if cycle reached when in cyclical mode
+			#if self.kl_anneal_cyclical:
+            if self.args.epoch % self.period == 0:
+                self.beta = 0
+            else:
+                self.step = (1 - 0) / (self.period / self.kl_anneal_ratio)
+                self.beta = self.beta + self.step
+        else:
+            self.beta = 1
     
     def get_beta(self):
-        raise NotImplementedError
+        # raise NotImplementedError
+        return self.beta
 
 
 def main():
@@ -158,6 +200,10 @@ def main():
         decoder.apply(init_weights)
     
     # --------- transfer to device ------------------------------------
+    nn.DataParallel(frame_predictor)
+    nn.DataParallel(posterior)
+    nn.DataParallel(encoder)
+    nn.DataParallel(encoder)
     frame_predictor.to(device)
     posterior.to(device)
     encoder.to(device)
@@ -195,6 +241,7 @@ def main():
 
     params = list(frame_predictor.parameters()) + list(posterior.parameters()) + list(encoder.parameters()) + list(decoder.parameters())
     optimizer = args.optimizer(params, lr=args.lr, betas=(args.beta1, 0.999))
+    optimizer = nn.DataParallel(optimizer)
     kl_anneal = kl_annealing(args)
 
     modules = {
@@ -207,6 +254,14 @@ def main():
 
     progress = tqdm(total=args.niter)
     best_val_psnr = 0
+    KL = []
+    PSNR = []
+    MSE = []
+    LOSS = []
+    BETA = []
+    TFR = []
+
+    ave_psnr = 0
     for epoch in range(start_epoch, start_epoch + niter):
         frame_predictor.train()
         posterior.train()
@@ -228,14 +283,17 @@ def main():
             epoch_loss += loss
             epoch_mse += mse
             epoch_kld += kld
-        
         if epoch >= args.tfr_start_decay_epoch:
             ### Update teacher forcing ratio ###
-            raise NotImplementedError
+            # raise NotImplementedError
+            args.tfr_decay_step = 1.0 / args.niter
+            args.tfr -= args.tfr_decay_step
+            if args.tfr < args.tfr_lower_bound:
+                args.tfr += args.tfr_decay_step
 
         progress.update(1)
-        with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-            train_record.write(('[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f\n' % (epoch, epoch_loss  / args.epoch_size, epoch_mse / args.epoch_size, epoch_kld / args.epoch_size)))
+        with open("./lab4/record.csv", 'a') as train_record:
+            train_record.write(('epoch: %02d, loss: %.5f , mse loss: %.5f, kld loss: %.5f\n' % (epoch, epoch_loss  / args.epoch_size, epoch_mse / args.epoch_size, epoch_kld / args.epoch_size)))
         
         frame_predictor.eval()
         encoder.eval()
@@ -250,15 +308,18 @@ def main():
                 except StopIteration:
                     validate_iterator = iter(validate_loader)
                     validate_seq, validate_cond = next(validate_iterator)
-
+                validate_seq, validate_cond = validate_seq.to(device), validate_cond.to(device)
                 pred_seq = pred(validate_seq, validate_cond, modules, args, device)
-                _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
+                _, _, psnr = finn_eval_seq(validate_seq[:, args.n_past:], pred_seq)
                 psnr_list.append(psnr)
                 
-            ave_psnr = np.mean(np.concatenate(psnr))
+            # ave_psnr = np.mean(np.concatenate(psnr))
+            ave_psnr = np.mean(np.concatenate(psnr_list))
+            print(ave_psnr)
+            PSNR.append(ave_psnr)
 
 
-            with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+            with open("./lab4/record.csv", 'a') as train_record:                
                 train_record.write(('====================== validate psnr = {:.5f} ========================\n'.format(ave_psnr)))
 
             if ave_psnr > best_val_psnr:
@@ -280,7 +341,12 @@ def main():
                 validate_iterator = iter(validate_loader)
                 validate_seq, validate_cond = next(validate_iterator)
 
+            validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:self.args.n_past + self.args.n_future]
+            validate_cond = validate_cond.permute((1, 0, 2))[:self.args.n_past + self.args.n_future]
             plot_pred(validate_seq, validate_cond, modules, epoch, args)
+            plot_rec( validate_seq, validate_cond, modules, epoch, args, device)
+    plot_kl(KL)
+    plot_psnr(PSNR)
 
 if __name__ == '__main__':
     main()
