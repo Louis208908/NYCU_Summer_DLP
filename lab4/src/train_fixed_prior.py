@@ -13,8 +13,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from dataset import bair_robot_pushing_dataset
-from models.lstm import gaussian_lstm, lstm
-from models.vgg_64 import vgg_decoder, vgg_encoder
+from torchvision.models.lstm import gaussian_lstm, lstm
+from torchvision.modelss.vgg_64 import vgg_decoder, vgg_encoder
 from utils import init_weights, kl_criterion, plot_pred, plot_rec, finn_eval_seq, pred, plot_psnr, plot_kl, mse_metric, plot_result
 from PIL import Image
 import time
