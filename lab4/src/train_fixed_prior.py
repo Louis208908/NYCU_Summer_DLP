@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument('--beta', type=float, default=0.0001, help='weighting on KL to prior')
     parser.add_argument('--num_workers', type=int, default=4, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
-    parser.add_argument('--cuda', default=True, actsion='store_true')  
+    parser.add_argument('--cuda', default=True, action='store_true')  
 
     args = parser.parse_args()
     return args
