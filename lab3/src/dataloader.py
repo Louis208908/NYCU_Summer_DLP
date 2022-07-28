@@ -11,6 +11,7 @@ import torch
 import os
 from prefetch_generator import BackgroundGenerator
 from sklearn.metrics import recall_score
+from tqdm import tqdm
 
 
 def getData(mode):
@@ -28,6 +29,7 @@ def getData(mode):
         return np.squeeze(img.values), np.squeeze(label.values)
 
 
+# +
 class RetinopathyLoader(data.Dataset):
     def __init__(self, root, mode):
         """
@@ -42,6 +44,20 @@ class RetinopathyLoader(data.Dataset):
         self.img_name, self.label = getData(mode)
         self.mode = mode
         print("> Found %d images..." % (len(self.img_name)))
+        self.img_list = list();
+        
+        
+
+        
+        for i in tqdm(range(len(self.img_name))):
+            path = self.root + self.img_name[i] + ".jpeg"
+            img = Image.open(path)
+
+#             m_img = torch.mean(img, [1, 2])
+#             std_img = torch.std(img, [1, 2])
+
+            
+            self.img_list.append(img)
 
     def __len__(self):
         """'return the size of dataset"""
@@ -66,54 +82,18 @@ class RetinopathyLoader(data.Dataset):
                         
             step4. Return processed image and label
         """
-        path = self.root + self.img_name[index] + ".jpeg"
+        
         label = self.label[index];
 
-        
-        img = Image.open(path)
-        
-        if(self.mode == "train"):
-
-            img_transform = transforms.Compose([
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomVerticalFlip(),
-                transforms.ToTensor(),  # range [0, 255] -> [0.0,1.0]
-            ]
-            )
-
-            img = img_transform(img);
-
-    #         m_img = torch.mean(img, [1, 2])
-    #         std_img = torch.std(img, [1, 2])
-
-
-            img_transformII = transforms.Compose([
-                transforms.Normalize((0.3749, 0.2602, 0.1857),(0.2526, 0.1780, 0.1291)),
-    #             transforms.Resize([512,512])
-            ]
-            )
-
-            img = img_transformII(img)
-        elif self.mode == "test":
-            img_transform = transforms.Compose([
-#                 transforms.RandomHorizontalFlip(),
-#                 transforms.RandomVerticalFlip(),
-                transforms.ToTensor(),  # range [0, 255] -> [0.0,1.0]
-            ]
-            )
-
-            img = img_transform(img);
-
-    #         m_img = torch.mean(img, [1, 2])
-    #         std_img = torch.std(img, [1, 2])
-
-
-            img_transformII = transforms.Compose([
-                transforms.Normalize((0.3749, 0.2602, 0.1857),(0.2526, 0.1780, 0.1291)),
-    #             transforms.Resize([512,512])
-            ]
-            )
-
-            img = img_transformII(img)
+        img = self.img_list[index]
+        img_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.ToTensor(),  # range [0, 255] -> [0.0,1.0]
+            transforms.Normalize((0.3749, 0.2602, 0.1857),
+                                 (0.2526, 0.1780, 0.1291)),
+        ]
+        )
+        img = img_transform(img)
 
         return img, label

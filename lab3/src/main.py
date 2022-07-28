@@ -1,8 +1,3 @@
-
-
-# +
-from ast import arg
-from turtle import forward
 import pandas as pd
 import numpy as np
 import torch
@@ -197,7 +192,10 @@ class DataLoader_pro(DataLoader):
         return BackgroundGenerator(super().__iter__());
 
 
-# +
+# -
+
+
+
 if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -219,23 +217,23 @@ if __name__ == "__main__":
 #     train_dataset = RetinopathyLoader("../data/", "train");
 #     test_dataset = RetinopathyLoader("../data/", "test");
 
-    train_loader_lp = DataLoader_pro(train_dataset,batch_size = 600, shuffle=True)
-    test_loader_lp = DataLoader_pro(test_dataset,batch_size = 600, shuffle=False)
+    train_loader_lp = DataLoader_pro(train_dataset,batch_size = 10, shuffle=True)
+    test_loader_lp = DataLoader_pro(test_dataset,batch_size = 10, shuffle=False)
     
     
-    train_loader_ft = DataLoader_pro(train_dataset,batch_size = 125, shuffle=True)
-    test_loader_ft = DataLoader_pro(test_dataset,batch_size = 125, shuffle=False)
+    train_loader_ft = DataLoader_pro(train_dataset,batch_size = 10, shuffle=True)
+    test_loader_ft = DataLoader_pro(test_dataset,batch_size = 10, shuffle=False)
 
     
-#     plt.figure(figsize=(10, 8))
-#     model_pretrain = model_creator("50",True,device);
-#     model_pretrain = model_pretrain.to(device)
+    plt.figure(figsize=(10, 8))
+    model_pretrain = model_creator("50",True,device);
+    model_pretrain = model_pretrain.to(device)
     
     
-#     lr = 2.5e-3
-#     epoch, train_acc, test_acc, best_acc,_,_ = model_pretrain.train_and_eval(train_loader_lp, test_loader_lp, 5, "linear-probe", lr * 2, 0);
-#     epoch, train_acc, test_acc, best_acc,best_labels1, best_preds1 = model_pretrain.train_and_eval(train_loader_ft, test_loader_ft, 10, "fine-tune", lr, 0);
-#     plot("ResNet50",epoch,train_acc,test_acc,True, "fine_tune");
+    lr = 2.5e-3
+    epoch, train_acc, test_acc, best_acc,_,_ = model_pretrain.train_and_eval(train_loader_lp, test_loader_lp, 5, "linear-probe", lr * 2, 0);
+    epoch, train_acc, test_acc, best_acc,best_labels1, best_preds1 = model_pretrain.train_and_eval(train_loader_ft, test_loader_ft, 10, "fine-tune", lr, 0);
+    plot("ResNet50",epoch,train_acc,test_acc,True, "fine_tune");
 
 
     
@@ -244,42 +242,42 @@ if __name__ == "__main__":
     model = model.to(device)
     lr = 4e-3
     epoch, train_acc, test_acc, best_acc,best_labels2, best_preds2 = model.train_and_eval(train_loader_ft, test_loader_ft, 10, "fine-tune", lr,1e-4);
-#     plot("ResNet50",epoch,train_acc,test_acc,False, "fine_tune");
-#     plt.legend(["pretrained_model's training", "pretrained_model's testing", "non-pretrained_model's training", "non-pretrained_model's testing"])
-#     fileName = os.getcwd() + "/experiment_result/accuracy_curve"
-#     timestr += time.strftime("%Y%m%d-%H%M%S")
-#     fileName = timestr + "_ResNet50";
-#     fileName += ".png"
-#     plt.savefig(fileName)
+    plot("ResNet50",epoch,train_acc,test_acc,False, "fine_tune");
+    plt.legend(["pretrained_model's training", "pretrained_model's testing", "non-pretrained_model's training", "non-pretrained_model's testing"])
+    fileName = os.getcwd() + "/experiment_result/accuracy_curve"
+    timestr += time.strftime("%Y%m%d-%H%M%S")
+    fileName = timestr + "_ResNet50";
+    fileName += ".png"
+    plt.savefig(fileName)
 
 
-#     plot_confusion_matrix(best_preds1,best_labels1,"ResNet50", True)
+    plot_confusion_matrix(best_preds1,best_labels1,"ResNet50", True)
     plot_confusion_matrix(best_preds2,best_labels2,"ResNet50", False)
-#     del model_pretrain
-#     del model;
+    del model_pretrain
+    del model;
 
-#     plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(10, 8))
     
-#     model_pretrain = model_creator("18",True,device);
-#     model_pretrain = model_pretrain.to(device)
-#     lr = 2e-3
-#     epoch, train_acc, test_acc, best_acc,_,_ = model_pretrain.train_and_eval(train_loader_lp, test_loader_lp, 5, "linear-probe", lr * 2,0);
-#     epoch, train_acc, test_acc, best_acc,best_labels1, best_preds1 = model_pretrain.train_and_eval(train_loader_ft, test_loader_ft, 10, "fine-tune", lr,0);
-#     plot("ResNet18",epoch,train_acc,test_acc,True, "fine_tune");
+    model_pretrain = model_creator("18",True,device);
+    model_pretrain = model_pretrain.to(device)
+    lr = 2e-3
+    epoch, train_acc, test_acc, best_acc,_,_ = model_pretrain.train_and_eval(train_loader_lp, test_loader_lp, 5, "linear-probe", lr * 2,0);
+    epoch, train_acc, test_acc, best_acc,best_labels1, best_preds1 = model_pretrain.train_and_eval(train_loader_ft, test_loader_ft, 10, "fine-tune", lr,0);
+    plot("ResNet18",epoch,train_acc,test_acc,True, "fine_tune");
     
-#     print("Training scratch model...")
-#     model = model_creator("18",False,device);
-#     model = model.to(device)
-#     lr = 4e-3
-#     epoch, train_acc, test_acc, best_acc,best_labels2, best_preds2 = model.train_and_eval(train_loader_ft, test_loader_ft, 10, "fine-tune", lr,1e-4);
-#     plot("ResNet18",epoch,train_acc,test_acc,False, "fine_tune");
+    print("Training scratch model...")
+    model = model_creator("18",False,device);
+    model = model.to(device)
+    lr = 4e-3
+    epoch, train_acc, test_acc, best_acc,best_labels2, best_preds2 = model.train_and_eval(train_loader_ft, test_loader_ft, 10, "fine-tune", lr,1e-4);
+    plot("ResNet18",epoch,train_acc,test_acc,False, "fine_tune");
     
-#     plt.legend(["pretrained_model's training", "pretrained_model's testing", "non-pretrained_model's training", "non-pretrained_model's testing"])
-#     timestr = time.strftime("%Y%m%d-%H%M%S")
-#     fileName = os.getcwd() + "/experiment_result/accuracy_curve/"
-#     fileName += timestr + "_ResNet18";
-#     fileName += ".png"
-#     plt.savefig(fileName)
+    plt.legend(["pretrained_model's training", "pretrained_model's testing", "non-pretrained_model's training", "non-pretrained_model's testing"])
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    fileName = os.getcwd() + "/experiment_result/accuracy_curve/"
+    fileName += timestr + "_ResNet18";
+    fileName += ".png"
+    plt.savefig(fileName)
 
-#     plot_confusion_matrix(best_preds1,best_labels1,"ResNet18", True)
-#     plot_confusion_matrix(best_preds2,best_labels2,"ResNet18", False)
+    plot_confusion_matrix(best_preds1,best_labels1,"ResNet18", True)
+    plot_confusion_matrix(best_preds2,best_labels2,"ResNet18", False)

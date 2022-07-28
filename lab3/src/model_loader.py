@@ -33,8 +33,8 @@ def plot_confusion_matrix(model,testing, device, model_type, pretrained):
     labels = list();
     with torch.no_grad():
         for input,label in tqdm(testing):
-            input = input.to(device, non_blocking = True);
-            label = label.to(device, dtype=torch.long, non_blocking = True)
+            input = input.to(device);
+            label = label.to(device, dtype=torch.long)
             pred = model(input)
             pred = torch.argmax(pred, dim=1)
             labels.extend(label.tolist())
@@ -77,8 +77,8 @@ def evaluate(model,test_loader,device):
     model.eval();
     with torch.no_grad():
         for input, labels in tqdm(test_loader):
-            input = input.to(device,non_blocking = True)
-            labels = labels.to(device,non_blocking = True)
+            input = input.to(device)
+            labels = labels.to(device)
             forward_output = model(input);
             prediction = torch.argmax(forward_output, dim=1)
             correct += torch.sum(prediction == labels).item()
@@ -87,15 +87,18 @@ def evaluate(model,test_loader,device):
 
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+    print(device)
 
     test_dataset = RetinopathyLoader(os.getcwd() + "/data/", "test");
-    test_loader = DataLoader_pro(test_dataset,batch_size = 600, shuffle=False)
+    test_loader = DataLoader_pro(test_dataset,batch_size = 20, shuffle=False)
+    # model = models.resnet50(pretrained = False);
+    # model.load(torch.load(os.getcwd() + "/model_depository/ResNet50_weight_82.12099644128114.pt"))
     model = torch.load(os.getcwd() + "/model_depository/ResNet50_82.23487544483986.pt")
 #     model = nn.DataParallel(model)
     model = model.to(device);
-    plot_confusion_matrix(model,test_loader,device,"ResNet50",True)
-#     print(evaluate(model,test_loader,device))
+    # os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+    # plot_confusion_matrix(model,test_loader,device,"ResNet50",True)
+    print(evaluate(model,test_loader,device))
 # -
 
 
