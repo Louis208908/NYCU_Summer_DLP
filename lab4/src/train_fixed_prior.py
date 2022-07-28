@@ -70,7 +70,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     x = x.to(device)
     cond = cond.to
 
-    h_seq = [modules['encoder']](x[i]) for i in range(args.n_past+args.n_future)]
+    h_seq = [modules['encoder'](x[i]) for i in range(args.n_past+args.n_future)]
     train_result = []
     origin_result = []    
     for i in range(1, args.n_past + args.n_future):
