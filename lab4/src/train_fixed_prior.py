@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--log_dir', default='./lab4', help='base directory to save logs')
     # parser.add_argument('--model_dir', default='./NYCU_Summer_DLP/lab4/model_depository', help='base directory to save logs')
     parser.add_argument('--model_dir', default='', help='base directory to save logs')
-    parser.add_argument('--data_root', default='./lab4/processed_data', help='root directory for data')
+    parser.add_argument('--data_root', default='./lab4', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
     parser.add_argument('--niter', type=int, default=300, help='number of epochs to train for')
     parser.add_argument('--epoch_size', type=int, default=600, help='epoch size')
