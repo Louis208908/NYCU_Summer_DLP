@@ -283,7 +283,7 @@ def main():
                 train_iterator = iter(train_loader)
                 seq, cond = next(train_iterator)
             
-            loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args)
+            loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args,device)
             epoch_loss += loss
             epoch_mse += mse
             epoch_kld += kld
