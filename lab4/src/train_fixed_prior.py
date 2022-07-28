@@ -89,7 +89,8 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
             else:
                 h_in, _ =  modules['encoder'](x_pred)
         z_t, mu, logvar = modules['posterior'](h_target)
-        lstim_in = torch.cat([h_in,z_t,cond[i - 1]], dim = 1)
+        lstm_in = torch.cat([h_in,z_t,cond[i - 1]], dim = 1)
+
         g_t = modules['frame_predictor'](lstm_in)
         x_pred = modules['decoder']([g_t,skip])
         mse += nn.MSELoss(x[i], x_pred)
