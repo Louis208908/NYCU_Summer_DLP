@@ -79,22 +79,36 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     for i in range(1, args.n_past + args.n_future):
         # raise NotImplementedError
 
-        h_target, _ = h_seq[i]
+        h_target = h_seq[i][0]
 
         if args.last_frame_skip or i < args.n_past:	
-            h_in, skip = h_seq[i - 1]
+            h, skip = h_seq[i-1]
         else:
-            if use_teacher_forcing:
-                h_in, _ = h_seq[ i - 1]
-            else:
-                h_in, _ =  modules['encoder'](x_pred)
-        z_t, mu, logvar = modules['posterior'](h_target)
-        lstm_in = torch.cat([h_in,z_t,cond[i - 1]], dim = 1)
+            h = h_seq[i-1][0]
+         
+        if i > 1:
+            previous_img = x_pred
+            pr_h = modules['encoder'](previous_img)
+            h_no_tfr = pr_h[0]
+        else:
+            h_no_tfr = h
 
-        g_t = modules['frame_predictor'](lstm_in)
-        x_pred = modules['decoder']([g_t,skip])
-        mse += nn.MSELoss(x[i], x_pred)
-        kld += kl_criterion(mu,logvar,args)
+        z_t, mu, logvar = modules['posterior'](h_target)
+
+        c = cond[:, i, :].float()
+
+        # h_pred = modules['frame_predictor'](torch.cat([h, z_t, c], 1))
+
+        if use_teacher_forcing:
+            h_pred = modules['frame_predictor'](torch.cat([h, z_t, c], 1))
+        else:
+            # print("without teacher")
+            h_pred = modules['frame_predictor'](torch.cat([h_no_tfr, z_t, c], 1))
+
+        x_pred = modules['decoder']([h_pred, skip])
+        mse += nn.MSELoss()(x_pred, x[:,i])
+        # mse += mse_metric(x_pred.detach().cpu().numpy(), x[:,i].detach().cpu().numpy())
+        kld += kl_criterion(mu, logvar, args)
     beta = kl_anneal.get_beta()
     loss = mse + kld * beta
     loss.backward()
