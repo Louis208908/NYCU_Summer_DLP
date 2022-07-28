@@ -17,6 +17,7 @@ from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
 from utils import init_weights, kl_criterion, plot_pred, plot_rec, finn_eval_seq, pred, plot_psnr, plot_kl, mse_metric, plot_result
 from PIL import Image
+import time
 
 torch.backends.cudnn.benchmark = True
 
@@ -25,8 +26,10 @@ def parse_args():
     parser.add_argument('--lr', default=0.002, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
     parser.add_argument('--batch_size', default=12, type=int, help='batch size')
-    parser.add_argument('--log_dir', default='./logs/fp', help='base directory to save logs')
-    parser.add_argument('--model_dir', default='./NYCU_Summer_DLP/lab4/model_depository', help='base directory to save logs')
+    # parser.add_argument('--log_dir', default='./logs/fp', help='base directory to save logs')
+    parser.add_argument('--log_dir', default='./lab4', help='base directory to save logs')
+    # parser.add_argument('--model_dir', default='./NYCU_Summer_DLP/lab4/model_depository', help='base directory to save logs')
+    parser.add_argument('--model_dir', default='', help='base directory to save logs')
     parser.add_argument('--data_root', default='./lab4/processed_data', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
     parser.add_argument('--niter', type=int, default=300, help='number of epochs to train for')
@@ -171,13 +174,13 @@ def main():
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
-    if os.path.exists('./{}/train_record.txt'.format(args.log_dir)):
-        os.remove('./{}/train_record.txt'.format(args.log_dir))
+    # if os.path.exists('./{}/train_record.txt'.format(args.log_dir)):
+    #     os.remove('./{}/train_record.txt'.format(args.log_dir))
     
-    print(args)
+    # print(args)
 
-    with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-        train_record.write('args: {}\n'.format(args))
+    # with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+    #     train_record.write('args: {}\n'.format(args))
 
     # ------------ build the models  --------------
 
@@ -262,6 +265,7 @@ def main():
     TFR = []
 
     ave_psnr = 0
+    timestr = time.strftime("%Y%m%d-%H%M%S")
     for epoch in range(start_epoch, start_epoch + niter):
         frame_predictor.train()
         posterior.train()
@@ -325,6 +329,7 @@ def main():
             if ave_psnr > best_val_psnr:
                 best_val_psnr = ave_psnr
                 # save the model
+                fileName = "./lab4/model_depository/" + timestr + str(epoch)
                 torch.save({
                     'encoder': encoder,
                     'decoder': decoder,
@@ -332,7 +337,7 @@ def main():
                     'posterior': posterior,
                     'args': args,
                     'last_epoch': epoch},
-                    '%s/model.pth' % args.log_dir)
+                    fileName)
 
         if epoch % 20 == 0:
             try:
@@ -341,8 +346,8 @@ def main():
                 validate_iterator = iter(validate_loader)
                 validate_seq, validate_cond = next(validate_iterator)
 
-            validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:self.args.n_past + self.args.n_future]
-            validate_cond = validate_cond.permute((1, 0, 2))[:self.args.n_past + self.args.n_future]
+            validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[args.n_past + args.n_future]
+            validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
             plot_pred(validate_seq, validate_cond, modules, epoch, args)
             plot_rec( validate_seq, validate_cond, modules, epoch, args, device)
     plot_kl(KL)
