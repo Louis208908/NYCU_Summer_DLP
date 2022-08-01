@@ -113,9 +113,9 @@ class kl_annealing():
         else:
             self.mode = "monotonic"
         self.beta = args.beta
-        self.kl_anneal_cyclical = self.args.kl_anneal_cyclical
-        self.kl_anneal_ratio = self.args.kl_anneal_ratio
-        self.kl_anneal_cycle = self.args.kl_anneal_cycle
+        self.kl_anneal_cyclical = args.kl_anneal_cyclical
+        self.kl_anneal_ratio = args.kl_anneal_ratio
+        self.kl_anneal_cycle = args.kl_anneal_cycle
         if self.kl_anneal_cyclical:
             self.period = int(self.args.niter / self.kl_anneal_cycle)
         else:
