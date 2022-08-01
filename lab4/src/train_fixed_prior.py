@@ -118,7 +118,7 @@ class kl_annealing():
         self.kl_anneal_ratio = args.kl_anneal_ratio
         self.kl_anneal_cycle = args.kl_anneal_cycle
         if self.kl_anneal_cyclical:
-            self.period = int(self.args.niter / self.kl_anneal_cycle)
+            self.period = int(args.niter / self.kl_anneal_cycle)
         else:
             self.period = args.niter
         #  raise NotImplementedError
