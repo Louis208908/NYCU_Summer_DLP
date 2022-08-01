@@ -26,9 +26,9 @@ def parse_args():
     parser.add_argument('--lr', default=0.002, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
     parser.add_argument('--batch_size', default=12, type=int, help='batch size')
-    parser.add_argument('--log_dir', default='lab4', help='base directory to save logs')
+    parser.add_argument('--log_dir', default='./lab4', help='base directory to save logs')
     parser.add_argument('--model_dir', default='', help='base directory to save logs')
-    parser.add_argument('--data_root', default= 'lab4', help='root directory for data')
+    parser.add_argument('--data_root', default= './lab4', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
     parser.add_argument('--niter', type=int, default=100, help='number of epochs to train for')
     parser.add_argument('--epoch_size', type=int, default=300, help='epoch size')
@@ -178,12 +178,12 @@ def main():
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
-    if os.path.exists('~/{}/train_record.txt'.format(args.log_dir)):
-        os.remove('~/{}/train_record.txt'.format(args.log_dir))
+    if os.path.exists('./{}/train_record.txt'.format(args.log_dir)):
+        os.remove('./{}/train_record.txt'.format(args.log_dir))
     
     print(args)
 
-    with open('~/{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+    with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
         train_record.write('args: {}\n'.format(args))
 
     # ------------ build the models  --------------
@@ -323,13 +323,13 @@ def main():
             PSNR.append(ave_psnr)
 
 
-            with open('~/{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+            with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
                 train_record.write(('====================== validate psnr = {:.5f} ========================\n'.format(ave_psnr)))
 
             if ave_psnr > best_val_psnr:
                 best_val_psnr = ave_psnr
                 # save the model
-                fileName = "~/lab4/model_depository/" + timestr + str(epoch)
+                fileName = "./lab4/model_depository/" + timestr + str(epoch)
                 torch.save({
                     'encoder': encoder,
                     'decoder': decoder,
