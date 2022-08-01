@@ -147,3 +147,6 @@ def pred(x, cond, modules,args,device):
         
         prediction = torch.stack(prediction)
         return prediction
+
+def plot_pred():
+    raise NotImplementedError
