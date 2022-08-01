@@ -15,9 +15,7 @@ from tqdm import tqdm
 from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
-from utils import init_weights, kl_criterion, plot_pred, plot_rec, finn_eval_seq, pred, plot_psnr, plot_kl, mse_metric, plot_result
-from PIL import Image
-import time
+from utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred
 
 torch.backends.cudnn.benchmark = True
 
@@ -26,13 +24,13 @@ def parse_args():
     parser.add_argument('--lr', default=0.002, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
     parser.add_argument('--batch_size', default=12, type=int, help='batch size')
-    parser.add_argument('--log_dir', default='./lab4', help='base directory to save logs')
+    parser.add_argument('--log_dir', default='./logs/fp', help='base directory to save logs')
     parser.add_argument('--model_dir', default='', help='base directory to save logs')
-    parser.add_argument('--data_root', default= './lab4', help='root directory for data')
+    parser.add_argument('--data_root', default='./data/processed_data', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
-    parser.add_argument('--niter', type=int, default=100, help='number of epochs to train for')
-    parser.add_argument('--epoch_size', type=int, default=300, help='epoch size')
-    parser.add_argument('--tfr', type=float, default=0.2, help='teacher forcing ratio (0 ~ 1)')
+    parser.add_argument('--niter', type=int, default=300, help='number of epochs to train for')
+    parser.add_argument('--epoch_size', type=int, default=600, help='epoch size')
+    parser.add_argument('--tfr', type=float, default=1.0, help='teacher forcing ratio (0 ~ 1)')
     parser.add_argument('--tfr_start_decay_epoch', type=int, default=0, help='The epoch that teacher forcing ratio become decreasing')
     parser.add_argument('--tfr_decay_step', type=float, default=0, help='The decay step size of teacher forcing ratio (0 ~ 1)')
     parser.add_argument('--tfr_lower_bound', type=float, default=0, help='The lower bound of teacher forcing ratio for scheduling teacher forcing ratio (0 ~ 1)')
@@ -42,7 +40,7 @@ def parse_args():
     parser.add_argument('--seed', default=1, type=int, help='manual seed')
     parser.add_argument('--n_past', type=int, default=2, help='number of frames to condition on')
     parser.add_argument('--n_future', type=int, default=10, help='number of frames to predict')
-    parser.add_argument('--n_eval', type=int, default=12, help='number of frames to predict at eval time')
+    parser.add_argument('--n_eval', type=int, default=30, help='number of frames to predict at eval time')
     parser.add_argument('--rnn_size', type=int, default=256, help='dimensionality of hidden layer')
     parser.add_argument('--posterior_rnn_layers', type=int, default=1, help='number of layers')
     parser.add_argument('--predictor_rnn_layers', type=int, default=2, help='number of layers')
@@ -51,12 +49,12 @@ def parse_args():
     parser.add_argument('--beta', type=float, default=0.0001, help='weighting on KL to prior')
     parser.add_argument('--num_workers', type=int, default=4, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
-    parser.add_argument('--cuda', default=True, action='store_true')  
+    parser.add_argument('--cuda', default=False, action='store_true')  
 
     args = parser.parse_args()
     return args
 
-def train(x, cond, modules, optimizer, kl_anneal, args,device):
+def train(x, cond, modules, optimizer, kl_anneal, args):
     modules['frame_predictor'].zero_grad()
     modules['posterior'].zero_grad()
     modules['encoder'].zero_grad()
@@ -68,36 +66,8 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     mse = 0
     kld = 0
     use_teacher_forcing = True if random.random() < args.tfr else False
-    x = x.to(device)
-    cond = cond.to(device)
-
-    h_seq = [modules['encoder'](x[i]) for i in range(args.n_past+args.n_future)]
-    train_result = []
-    origin_result = []    
     for i in range(1, args.n_past + args.n_future):
-        # raise NotImplementedError
-
-        h_target = h_seq[i][0]
-
-        if args.last_frame_skip or i < args.n_past:	
-            h, skip = h_seq[i-1]
-        else:
-            h = h_seq[i-1][0]
-         
-        if i > 1:
-            previous_img = x_pred
-            pr_h = modules['encoder'](previous_img)
-            h_no_tfr = pr_h[0]
-        else:
-            h_no_tfr = h
-        
-
-        z_t, mu, logvar = modules['posterior'](h_target)
-
-        c = cond[:, i, :].float()
-
-        h_pred = modules['frame_predictor'](torch.cat([h, z_t, c], 1))
-        x_pred = modules['decoder']([h_pred, skip])
+        raise NotImplementedError
 
     beta = kl_anneal.get_beta()
     loss = mse + kld * beta
@@ -110,34 +80,13 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
 class kl_annealing():
     def __init__(self, args):
         super().__init__()
-        # raise NotImplementedError
-
-        self.args = args
-        self.beta = self.args.beta
-        self.kl_anneal_cyclical = self.args.kl_anneal_cyclical
-        self.kl_anneal_ratio = self.args.kl_anneal_ratio
-        self.kl_anneal_cycle = self.args.kl_anneal_cycle
-        if self.kl_anneal_cyclical:
-            self.period = int(self.args.niter / self.kl_anneal_cycle)
-        else:
-            self.period = self.args.niter
+        raise NotImplementedError
     
     def update(self):
-        # raise NotImplementedError
-        if (self.args.epoch % self.period) <= (self.period / self.kl_anneal_ratio):
-			## Reset if cycle reached when in cyclical mode
-			#if self.kl_anneal_cyclical:
-            if self.args.epoch % self.period == 0:
-                self.beta = 0
-            else:
-                self.step = (1 - 0) / (self.period / self.kl_anneal_ratio)
-                self.beta = self.beta + self.step
-        else:
-            self.beta = 1
+        raise NotImplementedError
     
     def get_beta(self):
-        # raise NotImplementedError
-        return self.beta
+        raise NotImplementedError
 
 
 def main():
@@ -258,15 +207,6 @@ def main():
 
     progress = tqdm(total=args.niter)
     best_val_psnr = 0
-    KL = []
-    PSNR = []
-    MSE = []
-    LOSS = []
-    BETA = []
-    TFR = []
-
-    ave_psnr = 0
-    timestr = time.strftime("%Y%m%d-%H%M%S")
     for epoch in range(start_epoch, start_epoch + niter):
         frame_predictor.train()
         posterior.train()
@@ -284,18 +224,14 @@ def main():
                 train_iterator = iter(train_loader)
                 seq, cond = next(train_iterator)
             
-            loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args,device)
+            loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args)
             epoch_loss += loss
             epoch_mse += mse
             epoch_kld += kld
         
         if epoch >= args.tfr_start_decay_epoch:
             ### Update teacher forcing ratio ###
-            # raise NotImplementedError
-            args.tfr_decay_step = 1.0 / args.niter
-            args.tfr -= args.tfr_decay_step
-            if args.tfr < args.tfr_lower_bound:
-                args.tfr += args.tfr_decay_step
+            raise NotImplementedError
 
         progress.update(1)
         with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
@@ -314,15 +250,12 @@ def main():
                 except StopIteration:
                     validate_iterator = iter(validate_loader)
                     validate_seq, validate_cond = next(validate_iterator)
-                validate_seq, validate_cond = validate_seq.to(device), validate_cond.to(device)
+
                 pred_seq = pred(validate_seq, validate_cond, modules, args, device)
                 _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
                 psnr_list.append(psnr)
                 
-            # ave_psnr = np.mean(np.concatenate(psnr))
-            ave_psnr = np.mean(np.concatenate(psnr_list))
-            print(ave_psnr)
-            PSNR.append(ave_psnr)
+            ave_psnr = np.mean(np.concatenate(psnr))
 
 
             with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
@@ -331,7 +264,6 @@ def main():
             if ave_psnr > best_val_psnr:
                 best_val_psnr = ave_psnr
                 # save the model
-                fileName = "./lab4/model_depository/" + timestr + str(epoch)
                 torch.save({
                     'encoder': encoder,
                     'decoder': decoder,
@@ -339,7 +271,7 @@ def main():
                     'posterior': posterior,
                     'args': args,
                     'last_epoch': epoch},
-                    fileName)
+                    '%s/model.pth' % args.log_dir)
 
         if epoch % 20 == 0:
             try:
@@ -348,12 +280,7 @@ def main():
                 validate_iterator = iter(validate_loader)
                 validate_seq, validate_cond = next(validate_iterator)
 
-            validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[args.n_past + args.n_future]
-            validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
             plot_pred(validate_seq, validate_cond, modules, epoch, args)
-            plot_rec( validate_seq, validate_cond, modules, epoch, args, device)
-    plot_kl(KL)
-    plot_psnr(PSNR)
 
 if __name__ == '__main__':
     main()
