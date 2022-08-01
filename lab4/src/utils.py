@@ -123,8 +123,8 @@ def pred(x, cond, modules,args,device):
     with torch.no_grad():
         prediction = list()
         #record the prediction seq
-        modules["frame_predictor"].hidden = modules["frame_predictor"].init_hidden()
-        modules["posterior"].hidden = modules["posterior"].init_hidden()
+        modules["frame_predictor"].hidden = modules["frame_predictor"].module.init_hidden()
+        modules["posterior"].hidden = modules["posterior"].module.init_hidden()
         # 要這麼做是因為這是個lstm 我們要把過去資料清掉 不然就會記憶中就會有不該存在的資料
         x_input = x[0];
         for frame_id in range(args.n_past + args.n_future):
