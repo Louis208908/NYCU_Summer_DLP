@@ -102,9 +102,9 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
 
             beta = kl_anneal.get_beta()
             loss = mse + kld * beta
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
     # loss.backward()
 
     # optimizer.step()
