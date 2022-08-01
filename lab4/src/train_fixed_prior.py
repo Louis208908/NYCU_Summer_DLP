@@ -25,7 +25,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--lr', default=0.002, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
-    parser.add_argument('--batch_size', default=12, type=int, help='batch size')
+    parser.add_argument('--batch_size', default=30, type=int, help='batch size')
     parser.add_argument('--log_dir', default='./lab4', help='base directory to save logs')
     parser.add_argument('--model_dir', default='', help='base directory to save logs')
     parser.add_argument('--data_root', default='./lab4', help='root directory for data')
@@ -274,13 +274,14 @@ def main():
         epoch_mse = 0
         epoch_kld = 0
 
-        for _ in range(args.epoch_size):
+        for _ in tqdm(range(args.epoch_size), desc="[Epoch {}]".format(epoch)):
             try:
                 seq, cond = next(train_iterator)
             except StopIteration:
                 train_iterator = iter(train_loader)
                 seq, cond = next(train_iterator)
-            
+            seq  = seq.permute((1, 0, 2, 3, 4))
+            cond = cond.permute((1, 0, 2))
             loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args,device)
             epoch_loss += loss
             epoch_mse += mse
@@ -313,7 +314,8 @@ def main():
                 except StopIteration:
                     validate_iterator = iter(validate_loader)
                     validate_seq, validate_cond = next(validate_iterator)
-
+                validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
+                validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
                 pred_seq = pred(validate_seq, validate_cond, modules, args, device)
                 _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
                 psnr_list.append(psnr)
