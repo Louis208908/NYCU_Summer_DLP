@@ -90,12 +90,14 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
             h_no_tfr = pr_h[0]
         else:
             h_no_tfr = h
+        
 
         z_t, mu, logvar = modules['posterior'](h_target)
 
         c = cond[:, i, :].float()
 
-        # h_pred = modules['frame_predictor'](torch.cat([h, z_t, c], 1))
+        h_pred = modules['frame_predictor'](torch.cat([h, z_t, c], 1))
+        x_pred = modules['decoder']([h_pred, skip])
 
     beta = kl_anneal.get_beta()
     loss = mse + kld * beta
