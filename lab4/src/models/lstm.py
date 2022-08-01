@@ -66,6 +66,7 @@ class gaussian_lstm(nn.Module):
     def forward(self, input):
         embedded = self.embed(input)
         h_in = embedded
+        hidden = [x.permute(1,0,2).contiguous() for x in hidden]
         for i in range(self.n_layers):
             self.hidden[i] = self.lstm[i](h_in, self.hidden[i])
             h_in = self.hidden[i][0]
