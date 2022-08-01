@@ -11,6 +11,8 @@ import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from prefetch_generator import BackgroundGenerator
+
 
 from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
@@ -24,12 +26,12 @@ def parse_args():
     parser.add_argument('--lr', default=0.002, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
     parser.add_argument('--batch_size', default=12, type=int, help='batch size')
-    parser.add_argument('--log_dir', default='./logs/fp', help='base directory to save logs')
+    parser.add_argument('--log_dir', default='./lab4', help='base directory to save logs')
     parser.add_argument('--model_dir', default='', help='base directory to save logs')
-    parser.add_argument('--data_root', default='./data/processed_data', help='root directory for data')
+    parser.add_argument('--data_root', default='./lab4', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
-    parser.add_argument('--niter', type=int, default=300, help='number of epochs to train for')
-    parser.add_argument('--epoch_size', type=int, default=600, help='epoch size')
+    parser.add_argument('--niter', type=int, default=100, help='number of epochs to train for')
+    parser.add_argument('--epoch_size', type=int, default=300, help='epoch size')
     parser.add_argument('--tfr', type=float, default=1.0, help='teacher forcing ratio (0 ~ 1)')
     parser.add_argument('--tfr_start_decay_epoch', type=int, default=0, help='The epoch that teacher forcing ratio become decreasing')
     parser.add_argument('--tfr_decay_step', type=float, default=0, help='The decay step size of teacher forcing ratio (0 ~ 1)')
@@ -54,7 +56,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def train(x, cond, modules, optimizer, kl_anneal, args):
+def train(x, cond, modules, optimizer, kl_anneal, args,device):
     modules['frame_predictor'].zero_grad()
     modules['posterior'].zero_grad()
     modules['encoder'].zero_grad()
@@ -67,7 +69,32 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
     kld = 0
     use_teacher_forcing = True if random.random() < args.tfr else False
     for i in range(1, args.n_past + args.n_future):
-        raise NotImplementedError
+        # raise NotImplementedError
+        x = x.to(device)
+        cond = cond.to(device)
+        encoded_seq = [modules["encoder"](x[i]) for i in range(args.n_past + args.n_future)];
+
+        for i in range(1, args.n_past + args.n_future):
+            h_t , _ = encoded_seq[i];
+
+            if args.last_frame_skip or i < args.n_past:
+                h_previous, _ = encoded_seq[ i - 1 ]
+            else:
+                if use_teacher_forcing:
+                    h_previous,_ = encoded_seq[ i - 1]
+                else:
+                    h_previous,_ = modules["encoder"](x_pred)
+            
+            latent_var, mu, logvar = modules["posterior"](h_t)
+
+            lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)
+            
+            decoded_object = modules["frame_predictor"](lstm_input)
+            x_pred = modules["decoder"]([decoded_object, _])
+
+            mse += nn.MSELoss(x[i], x_pred)
+            kld += kl_criterion(mu,logvar,args)
+
 
     beta = kl_anneal.get_beta()
     loss = mse + kld * beta
@@ -80,13 +107,39 @@ def train(x, cond, modules, optimizer, kl_anneal, args):
 class kl_annealing():
     def __init__(self, args):
         super().__init__()
-        raise NotImplementedError
+
+        if args.kl_anneal_cyclical:
+            self.mode = "cyclical"
+        else:
+            self.mode = "monotonic"
+        self.beta = args.beta
+        self.kl_anneal_cyclical = self.args.kl_anneal_cyclical
+        self.kl_anneal_ratio = self.args.kl_anneal_ratio
+        self.kl_anneal_cycle = self.args.kl_anneal_cycle
+        if self.kl_anneal_cyclical:
+            self.period = int(self.args.niter / self.kl_anneal_cycle)
+        else:
+            self.period = self.args.niter
+        #  raise NotImplementedError
     
-    def update(self):
-        raise NotImplementedError
+    def update(self, epoch):
+
+        if self.mode == 'monotonic':
+            self.beta =  (1.0 / (self.time)) * (epoch) if epoch < self.period else 1.
+        else:
+            epoch %= self.period
+            self.beta = (1.0 / (self.period / 2))*(epoch) if epoch < self.period / 2 else 1.
+        # raise NotImplementedError
     
     def get_beta(self):
+        return self.beta;
         raise NotImplementedError
+
+
+class DataLoader_pro(DataLoader):    
+    def __iter__(self):
+        return BackgroundGenerator(super().__iter__());
+
 
 
 def main():
@@ -166,7 +219,7 @@ def main():
     # --------- load a dataset ------------------------------------
     train_data = bair_robot_pushing_dataset(args, 'train')
     validate_data = bair_robot_pushing_dataset(args, 'validate')
-    train_loader = DataLoader(train_data,
+    train_loader = DataLoader_pro(train_data,
                             num_workers=args.num_workers,
                             batch_size=args.batch_size,
                             shuffle=True,
@@ -174,7 +227,7 @@ def main():
                             pin_memory=True)
     train_iterator = iter(train_loader)
 
-    validate_loader = DataLoader(validate_data,
+    validate_loader = DataLoader_pro(validate_data,
                             num_workers=args.num_workers,
                             batch_size=args.batch_size,
                             shuffle=True,
@@ -207,6 +260,9 @@ def main():
 
     progress = tqdm(total=args.niter)
     best_val_psnr = 0
+    tfrs = list()
+    kl_betas = list()
+    PSNRs = list()
     for epoch in range(start_epoch, start_epoch + niter):
         frame_predictor.train()
         posterior.train()
@@ -224,14 +280,20 @@ def main():
                 train_iterator = iter(train_loader)
                 seq, cond = next(train_iterator)
             
-            loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args)
+            loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args,device)
             epoch_loss += loss
             epoch_mse += mse
             epoch_kld += kld
         
         if epoch >= args.tfr_start_decay_epoch:
             ### Update teacher forcing ratio ###
-            raise NotImplementedError
+            # raise NotImplementedError
+            args.tfr_decay_step = 1.0 / args.niter;
+            args.tfr -= args.tfr_decay_step;
+            if args.tfr <= args.tfr_lower_bound:
+                args.tfr = args.tfr_lower_bound
+        kl_betas.append(kl_anneal.get_beta())
+        tfrs.append(args.tfr)
 
         progress.update(1)
         with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
@@ -244,7 +306,7 @@ def main():
 
         if epoch % 5 == 0:
             psnr_list = []
-            for _ in range(len(validate_data) // args.batch_size):
+            for _ in tqdm(range(len(validate_data) // args.batch_size)):
                 try:
                     validate_seq, validate_cond = next(validate_iterator)
                 except StopIteration:
@@ -255,7 +317,8 @@ def main():
                 _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
                 psnr_list.append(psnr)
                 
-            ave_psnr = np.mean(np.concatenate(psnr))
+            ave_psnr = np.mean(np.concatenate(psnr_list))
+            PSNRs.append(ave_psnr)
 
 
             with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
@@ -273,14 +336,14 @@ def main():
                     'last_epoch': epoch},
                     '%s/model.pth' % args.log_dir)
 
-        if epoch % 20 == 0:
-            try:
-                validate_seq, validate_cond = next(validate_iterator)
-            except StopIteration:
-                validate_iterator = iter(validate_loader)
-                validate_seq, validate_cond = next(validate_iterator)
+        # if epoch % 20 == 0:
+        #     try:
+        #         validate_seq, validate_cond = next(validate_iterator)
+        #     except StopIteration:
+        #         validate_iterator = iter(validate_loader)
+        #         validate_seq, validate_cond = next(validate_iterator)
 
-            plot_pred(validate_seq, validate_cond, modules, epoch, args)
+        #     plot_pred(validate_seq, validate_cond, modules, epoch, args)
 
 if __name__ == '__main__':
     main()
