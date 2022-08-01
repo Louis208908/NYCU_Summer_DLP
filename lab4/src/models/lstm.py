@@ -29,9 +29,9 @@ class lstm(nn.Module):
     def forward(self, input):
         embedded = self.embed(input)
         h_in = embedded
-        hidden = [x.permute(1,0,2).contiguous() for x in hidden]        
         for i in range(self.n_layers):
-            self.hidden[i] = self.lstm[i](h_in, self.hidden[i])
+            hidden = [x.permute(1,0,2).contiguous() for x in self.hidden[i]]        
+            self.hidden[i] = self.lstm[i](h_in, hidden)
             h_in = self.hidden[i][0]
 
         return self.output(h_in)
@@ -46,7 +46,7 @@ class gaussian_lstm(nn.Module):
         self.n_layers = n_layers
         self.batch_size = batch_size
         self.embed = nn.Linear(input_size, hidden_size)
-        self.lstm = nn.ModuleList([nn.LSTMCell(hidden_size, hidden_size, batch_first = True) for i in range(self.n_layers)])
+        self.lstm = nn.ModuleList([nn.LSTMCell(hidden_size, hidden_size) for i in range(self.n_layers)])
         self.mu_net = nn.Linear(hidden_size, output_size)
         self.logvar_net = nn.Linear(hidden_size, output_size)
         self.hidden = self.init_hidden()
@@ -54,8 +54,8 @@ class gaussian_lstm(nn.Module):
     def init_hidden(self):
         hidden = []
         for _ in range(self.n_layers):
-            hidden.append((Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device)),
-                           Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device))))
+           hidden.append((Variable(torch.zeros(self.batch_size,self.n_layers, self.hidden_size).to(self.device)),
+                           Variable(torch.zeros(self.batch_size,self.n_layers, self.hidden_size).to(self.device))))
         return hidden
 
     def reparameterize(self, mu, logvar):
@@ -69,8 +69,8 @@ class gaussian_lstm(nn.Module):
         h_in = embedded
         # h_in = h_in.permute(1,0,2)        
         for i in range(self.n_layers):
-            self.hidden[i] = self.lstm[i](h_in, self.hidden[i])
-            h_in = self.hidden[i][0]
+            hidden = [x.permute(1,0,2).contiguous() for x in self.hidden[i]]        
+            self.hidden[i] = self.lstm[i](h_in, hidden)
         mu = self.mu_net(h_in)
         logvar = self.logvar_net(h_in)
         z = self.reparameterize(mu, logvar)
