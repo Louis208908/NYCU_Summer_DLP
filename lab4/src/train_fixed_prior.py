@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--data_root', default='./lab4', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
     parser.add_argument('--niter', type=int, default=100, help='number of epochs to train for')
-    parser.add_argument('--epoch_size', type=int, default=300, help='epoch size')
+    parser.add_argument('--epoch_size', type=int, default=150, help='epoch size')
     parser.add_argument('--tfr', type=float, default=1.0, help='teacher forcing ratio (0 ~ 1)')
     parser.add_argument('--tfr_start_decay_epoch', type=int, default=0, help='The epoch that teacher forcing ratio become decreasing')
     parser.add_argument('--tfr_decay_step', type=float, default=0, help='The decay step size of teacher forcing ratio (0 ~ 1)')
