@@ -58,6 +58,8 @@ def parse_args():
     return args
 
 def train(x, cond, modules, optimizer, kl_anneal, args,device):
+    scaler = torch.cuda.amp.GradScaler()
+    autocast = torch.cuda.amp.autocast
     modules['frame_predictor'].zero_grad()
     modules['posterior'].zero_grad()
     modules['encoder'].zero_grad()
@@ -73,35 +75,39 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
         # raise NotImplementedError
         x = x.to(device)
         cond = cond.to(device)
-        encoded_seq = [modules["encoder"](x[i]) for i in range(args.n_past + args.n_future)];
 
-        for i in range(1, args.n_past + args.n_future):
-            h_t , _ = encoded_seq[i];
+        with autocast():
+            encoded_seq = [modules["encoder"](x[i]) for i in range(args.n_past + args.n_future)];
 
-            if args.last_frame_skip or i < args.n_past:
-                h_previous, _ = encoded_seq[ i - 1 ]
-            else:
-                if use_teacher_forcing:
-                    h_previous,_ = encoded_seq[ i - 1]
+            for i in range(1, args.n_past + args.n_future):
+                h_t , _ = encoded_seq[i];
+
+                if args.last_frame_skip or i < args.n_past:
+                    h_previous, _ = encoded_seq[ i - 1 ]
                 else:
-                    h_previous,_ = modules["encoder"](x_pred)
-            
-            latent_var, mu, logvar = modules["posterior"](h_t)
+                    if use_teacher_forcing:
+                        h_previous,_ = encoded_seq[ i - 1]
+                    else:
+                        h_previous,_ = modules["encoder"](x_pred)
+                
+                latent_var, mu, logvar = modules["posterior"](h_t)
 
-            lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)
-            
-            decoded_object = modules["frame_predictor"](lstm_input)
-            x_pred = modules["decoder"]([decoded_object, _])
+                lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)
+                
+                decoded_object = modules["frame_predictor"](lstm_input)
+                x_pred = modules["decoder"]([decoded_object, _])
 
-            mse += nn.MSELoss()(x[i], x_pred)
-            kld += kl_criterion(mu,logvar,args)
+                mse += nn.MSELoss()(x[i], x_pred)
+                kld += kl_criterion(mu,logvar,args)
 
+            beta = kl_anneal.get_beta()
+            loss = mse + kld * beta
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+    # loss.backward()
 
-    beta = kl_anneal.get_beta()
-    loss = mse + kld * beta
-    loss.backward()
-
-    optimizer.step()
+    # optimizer.step()
 
     return loss.detach().cpu().numpy() / (args.n_past + args.n_future), mse.detach().cpu().numpy() / (args.n_past + args.n_future), kld.detach().cpu().numpy() / (args.n_future + args.n_past)
 
