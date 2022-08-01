@@ -64,8 +64,8 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     modules['decoder'].zero_grad()
 
     # initialize the hidden state.
-    modules['frame_predictor'].hidden = modules['frame_predictor'].module.init_hidden()
-    modules['posterior'].hidden = modules['posterior'].module.init_hidden()
+    modules['frame_predictor'].hidden = modules['frame_predictor'].init_hidden()
+    modules['posterior'].hidden = modules['posterior'].init_hidden()
     mse = 0
     kld = 0
     use_teacher_forcing = True if random.random() < args.tfr else False
@@ -101,7 +101,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     loss = mse + kld * beta
     loss.backward()
 
-    optimizer.module.step()
+    optimizer.step()
 
     return loss.detach().cpu().numpy() / (args.n_past + args.n_future), mse.detach().cpu().numpy() / (args.n_past + args.n_future), kld.detach().cpu().numpy() / (args.n_future + args.n_past)
 
@@ -212,10 +212,10 @@ def main():
         decoder.apply(init_weights)
     
     # --------- transfer to device ------------------------------------
-    frame_predictor = nn.DataParallel(frame_predictor)
-    posterior = nn.DataParallel(posterior)
-    encoder = nn.DataParallel(encoder)
-    decoder = nn.DataParallel(decoder)
+    # frame_predictor = nn.DataParallel(frame_predictor)
+    # posterior = nn.DataParallel(posterior)
+    # encoder = nn.DataParallel(encoder)
+    # decoder = nn.DataParallel(decoder)
 
     frame_predictor.to(device)
     posterior.to(device)
@@ -254,7 +254,7 @@ def main():
 
     params = list(frame_predictor.parameters()) + list(posterior.parameters()) + list(encoder.parameters()) + list(decoder.parameters())
     optimizer = args.optimizer(params, lr=args.lr, betas=(args.beta1, 0.999))
-    optimizer = nn.DataParallel(optimizer)
+    # optimizer = nn.DataParallel(optimizer)
     kl_anneal = kl_annealing(args)
 
     modules = {
