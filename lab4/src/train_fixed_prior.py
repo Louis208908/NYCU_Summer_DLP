@@ -212,10 +212,10 @@ def main():
         decoder.apply(init_weights)
     
     # --------- transfer to device ------------------------------------
-    frame_predictor = nn.DataParallel(frame_predictor, dim = 1)
-    posterior = nn.DataParallel(posterior, dim = 1)
-    encoder = nn.DataParallel(encoder, dim = 1)
-    decoder = nn.DataParallel(decoder, dim = 1)
+    frame_predictor = nn.DataParallel(frame_predictor)
+    posterior = nn.DataParallel(posterior)
+    encoder = nn.DataParallel(encoder)
+    decoder = nn.DataParallel(decoder)
 
     frame_predictor.to(device)
     posterior.to(device)
