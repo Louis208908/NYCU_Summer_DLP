@@ -119,7 +119,7 @@ class kl_annealing():
         if self.kl_anneal_cyclical:
             self.period = int(self.args.niter / self.kl_anneal_cycle)
         else:
-            self.period = self.args.niter
+            self.period = args.niter
         #  raise NotImplementedError
     
     def update(self, epoch):
