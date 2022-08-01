@@ -93,7 +93,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
             decoded_object = modules["frame_predictor"](lstm_input)
             x_pred = modules["decoder"]([decoded_object, _])
 
-            mse += nn.MSELoss(x[i], x_pred)
+            mse += nn.MSELoss()(x[i], x_pred)
             kld += kl_criterion(mu,logvar,args)
 
 
