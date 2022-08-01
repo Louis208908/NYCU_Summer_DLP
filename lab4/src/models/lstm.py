@@ -1,3 +1,4 @@
+from inspect import Parameter
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -53,8 +54,10 @@ class gaussian_lstm(nn.Module):
     def init_hidden(self):
         hidden = []
         for _ in range(self.n_layers):
-            hidden.append((Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device)),
-                           Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device))))
+            # hidden.append((Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device)),
+            #                Variable(torch.zeros(self.batch_size, self.hidden_size).to(self.device))))
+            hidden.append((Parameter(torch.zeros(self.batch_size, self.hidden_size).to(self.device)),
+                           Parameter(torch.zeros(self.batch_size, self.hidden_size).to(self.device))))
         return hidden
 
     def reparameterize(self, mu, logvar):
