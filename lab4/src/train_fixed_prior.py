@@ -53,6 +53,7 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=4, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
     parser.add_argument('--cuda', default=False, action='store_true')  
+    parser.add_argument('--cuda_index', default=0, action = 'store_true', help='to identify which device to use')
 
     args = parser.parse_args()
     return args
