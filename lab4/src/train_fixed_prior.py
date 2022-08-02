@@ -402,7 +402,7 @@ def main():
                     validate_iterator = iter(validate_loader)
                     validate_seq, validate_cond = next(validate_iterator)
 
-                plot_pred(validate_seq, validate_cond, modules, epoch, args)
+                plot_pred(validate_seq, validate_cond, modules, epoch, args,device)
 
         
 
