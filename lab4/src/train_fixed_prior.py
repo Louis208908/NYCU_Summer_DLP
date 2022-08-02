@@ -401,7 +401,8 @@ def main():
                 except StopIteration:
                     validate_iterator = iter(validate_loader)
                     validate_seq, validate_cond = next(validate_iterator)
-
+                validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
+                validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
                 plot_pred(validate_seq, validate_cond, modules, epoch, args,device)
 
         
