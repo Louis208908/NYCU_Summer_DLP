@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=4, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
     parser.add_argument('--cuda', default=False, action='store_true')  
-    parser.add_argument('--cuda_index', default=0, action = 'store_true', help='to identify which device to use')
+    parser.add_argument('--cuda_index', default=0, type = int, help='to identify which device to use')
 
     args = parser.parse_args()
     return args
@@ -151,6 +151,7 @@ class DataLoader_pro(DataLoader):
 
 
 def main():
+    import time
     args = parse_args()
     if args.cuda:
         assert torch.cuda.is_available(), 'CUDA is not available.'
@@ -180,10 +181,11 @@ def main():
         args.log_dir = '%s/continued' % args.log_dir
         start_epoch = saved_model['last_epoch']
     else:
+        timestr = time.strftime("%Y%m%d-%H%M%S")
         name = 'rnn_size=%d-predictor-posterior-rnn_layers=%d-%d-n_past=%d-n_future=%d-lr=%.4f-g_dim=%d-z_dim=%d-last_frame_skip=%s-beta=%.7f'\
             % (args.rnn_size, args.predictor_rnn_layers, args.posterior_rnn_layers, args.n_past, args.n_future, args.lr, args.g_dim, args.z_dim, args.last_frame_skip, args.beta)
-
-        args.log_dir = '%s/%s' % (args.log_dir, name)
+        timestr += name
+        args.log_dir = '%s/%s' % (args.log_dir, timestr)
         niter = args.niter
         start_epoch = 0
 
