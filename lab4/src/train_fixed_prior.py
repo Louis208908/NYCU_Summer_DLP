@@ -393,7 +393,7 @@ def main():
                         'posterior': posterior,
                         'args': args,
                         'last_epoch': epoch},
-                        '%s/model_%7f.pth' %args.log_dir, ave_psnr)
+                        '%s/model_%.7f.pth' %args.log_dir, ave_psnr)
 
             if epoch % 20 == 0:
                 try:
