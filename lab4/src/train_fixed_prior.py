@@ -17,12 +17,14 @@ from prefetch_generator import BackgroundGenerator
 from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
-from utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred
+from utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred, plot_rec
 
 torch.backends.cudnn.benchmark = True
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--train", default=True, action="store_true")
+    parser.add_argument("--test" , default=False, action="store_true")
     parser.add_argument('--lr', default=0.002, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
     parser.add_argument('--batch_size', default=20, type=int, help='batch size')
@@ -148,7 +150,31 @@ class DataLoader_pro(DataLoader):
     def __iter__(self):
         return BackgroundGenerator(super().__iter__());
 
+def test(test_data, test_loader, test_iterator, args ,modules,device, test_set="test"):
+		"""Test only"""
+		print("Testing only, plotting results...")
+		psnr_list = []
+		for _ in tqdm(range(len(test_data) // args.batch_size + 1)):
+			try:
+				test_seq, test_cond = next(test_iterator)
+			except StopIteration:
+				test_iterator = iter(test_loader)
+				test_seq, test_cond = next(test_iterator)
 
+			test_seq  = test_seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
+			test_cond = test_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
+
+			pred_seq = pred(test_seq, test_cond, modules, args, device)
+			_, _, psnr = finn_eval_seq(test_seq[args.n_past:], pred_seq[args.n_past:])
+			psnr_list.append(psnr)
+
+		ave_psnr = np.mean(np.concatenate(psnr_list))
+		print("[Epoch best] {} psnr = {:.5f}".format(test_set, ave_psnr))
+
+		sample_idx = np.random.randint(0, args.batch_size)
+
+		plot_pred(test_seq, test_cond, modules, "best", args, device, sample_idx=sample_idx)
+		plot_rec( test_seq, test_cond, modules, "best", args, device, sample_idx=sample_idx)
 
 def main():
     import time
@@ -163,24 +189,40 @@ def main():
             device = "cuda:0"
         else:
             device = "cuda:1"
-    
+    if args.train:
+        mode = "train"
+    if args.test:
+        mode = "test"
     assert args.n_past + args.n_future <= 30 and args.n_eval <= 30
     assert 0 <= args.tfr and args.tfr <= 1
     assert 0 <= args.tfr_start_decay_epoch 
     assert 0 <= args.tfr_decay_step and args.tfr_decay_step <= 1
 
-    if args.model_dir != '':
-        # load model and continue training from checkpoint
-        saved_model = torch.load('%s/model.pth' % args.model_dir)
-        optimizer = args.optimizer
-        model_dir = args.model_dir
-        niter = args.niter
-        args = saved_model['args']
-        args.optimizer = optimizer
-        args.model_dir = model_dir
-        args.log_dir = '%s/continued' % args.log_dir
-        start_epoch = saved_model['last_epoch']
-    else:
+    if mode == "test":
+        assert args.model_dir != '', "model_dir should not be empty!"
+        args.log_dir = './lab4/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0001000'
+        saved_model = torch.load('{}/model.pth'.format(args.log_dir))
+        testing_data = bair_robot_pushing_dataset(args, 'test')
+        testing_loader = DataLoader_pro(testing_data,
+                                num_workers=args.num_workers,
+                                batch_size=args.batch_size,
+                                shuffle=True,
+                                drop_last=True,
+                                pin_memory=True)
+        testing_iterator = iter(testing_loader)
+        frame_predictor = saved_model["frame_predictor"].to(device)
+        posterior = saved_model["posterior"].to(device)
+        decoder = saved_model["decoder"].to(device)
+        encoder = saved_model["encoder"].to(device)
+        modules = {
+            'frame_predictor': frame_predictor,
+            'posterior': posterior,
+            'encoder': encoder,
+            'decoder': decoder,
+        }
+        test(testing_data, testing_loader, testing_iterator,args,modules,device)
+
+    elif mode == "train":
         timestr = time.strftime("%Y%m%d-%H%M%S-")
         name = '-lr=%.4f-beta=%.7f-optim=%7s'\
             % (args.lr,args.beta,args.optimizer)
@@ -188,179 +230,179 @@ def main():
         args.log_dir = '%s/%s' % (args.log_dir, timestr)
         niter = args.niter
         start_epoch = 0
+        os.makedirs(args.log_dir, exist_ok=True)
+        os.makedirs('%s/gen/' % args.log_dir, exist_ok=True)
 
-    os.makedirs(args.log_dir, exist_ok=True)
-    os.makedirs('%s/gen/' % args.log_dir, exist_ok=True)
 
-    print("Random Seed: ", args.seed)
-    random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
 
-    if os.path.exists('./{}/train_record.txt'.format(args.log_dir)):
-        os.remove('./{}/train_record.txt'.format(args.log_dir))
-    
-    print(args)
+        print("Random Seed: ", args.seed)
+        random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
 
-    with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-        train_record.write('args: {}\n'.format(args))
-
-    # ------------ build the models  --------------
-
-    if args.model_dir != '':
-        frame_predictor = saved_model['frame_predictor']
-        posterior = saved_model['posterior']
-    else:
-        frame_predictor = lstm(args.g_dim+args.z_dim + args.cond_dim, args.g_dim, args.rnn_size, args.predictor_rnn_layers, args.batch_size, device)
-        posterior = gaussian_lstm(args.g_dim, args.z_dim, args.rnn_size, args.posterior_rnn_layers, args.batch_size, device)
-        frame_predictor.apply(init_weights)
-        posterior.apply(init_weights)
-            
-    if args.model_dir != '':
-        decoder = saved_model['decoder']
-        encoder = saved_model['encoder']
-    else:
-        encoder = vgg_encoder(args.g_dim)
-        decoder = vgg_decoder(args.g_dim)
-        encoder.apply(init_weights)
-        decoder.apply(init_weights)
-    
-    # --------- transfer to device ------------------------------------
-    frame_predictor.to(device)
-    posterior.to(device)
-    encoder.to(device)
-    decoder.to(device)
-
-    # --------- load a dataset ------------------------------------
-    train_data = bair_robot_pushing_dataset(args, 'train')
-    validate_data = bair_robot_pushing_dataset(args, 'validate')
-    train_loader = DataLoader_pro(train_data,
-                            num_workers=args.num_workers,
-                            batch_size=args.batch_size,
-                            shuffle=True,
-                            drop_last=True,
-                            pin_memory=True)
-    train_iterator = iter(train_loader)
-
-    validate_loader = DataLoader_pro(validate_data,
-                            num_workers=args.num_workers,
-                            batch_size=args.batch_size,
-                            shuffle=True,
-                            drop_last=True,
-                            pin_memory=True)
-
-    validate_iterator = iter(validate_loader)
-
-    # ---------------- optimizers ----------------
-    if args.optimizer == 'adam':
-        args.optimizer = optim.Adam
-    elif args.optimizer == 'rmsprop':
-        args.optimizer = optim.RMSprop
-    elif args.optimizer == 'sgd':
-        args.optimizer = optim.SGD
-    else:
-        raise ValueError('Unknown optimizer: %s' % args.optimizer)
-
-    params = list(frame_predictor.parameters()) + list(posterior.parameters()) + list(encoder.parameters()) + list(decoder.parameters())
-    optimizer = args.optimizer(params, lr=args.lr, betas=(args.beta1, 0.999))
-    kl_anneal = kl_annealing(args)
-
-    modules = {
-        'frame_predictor': frame_predictor,
-        'posterior': posterior,
-        'encoder': encoder,
-        'decoder': decoder,
-    }
-    # --------- training loop ------------------------------------
-
-    progress = tqdm(total=args.niter)
-    best_val_psnr = 0
-    tfrs = list()
-    kl_betas = list()
-    PSNRs = list()
-    for epoch in range(start_epoch, start_epoch + niter):
-        frame_predictor.train()
-        posterior.train()
-        encoder.train()
-        decoder.train()
-
-        epoch_loss = 0
-        epoch_mse = 0
-        epoch_kld = 0
-
-        for _ in tqdm(range(args.epoch_size), desc="[Epoch {}]".format(epoch)):
-            try:
-                seq, cond = next(train_iterator)
-            except StopIteration:
-                train_iterator = iter(train_loader)
-                seq, cond = next(train_iterator)
-            seq  = seq.permute((1, 0, 2, 3, 4))
-            cond = cond.permute((1, 0, 2))
-            loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args,device)
-            epoch_loss += loss
-            epoch_mse += mse
-            epoch_kld += kld
+        if os.path.exists('./{}/train_record.txt'.format(args.log_dir)):
+            os.remove('./{}/train_record.txt'.format(args.log_dir))
         
-        if epoch >= args.tfr_start_decay_epoch:
-            ### Update teacher forcing ratio ###
-            # raise NotImplementedError
-            args.tfr_decay_step = 1.0 / args.niter;
-            args.tfr -= args.tfr_decay_step;
-            if args.tfr <= args.tfr_lower_bound:
-                args.tfr = args.tfr_lower_bound
-        kl_betas.append(kl_anneal.get_beta())
-        tfrs.append(args.tfr)
+        # print(args)
 
-        progress.update(1)
         with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-            train_record.write(('[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f\n' % (epoch, epoch_loss  / args.epoch_size, epoch_mse / args.epoch_size, epoch_kld / args.epoch_size)))
-        
-        frame_predictor.eval()
-        encoder.eval()
-        decoder.eval()
-        posterior.eval()
+            train_record.write('args: {}\n'.format(args))
 
-        if epoch % 5 == 0:
-            psnr_list = []
-            for _ in tqdm(range(len(validate_data) // args.batch_size)):
+        # ------------ build the models  --------------
+
+        if args.model_dir != '':
+            frame_predictor = saved_model['frame_predictor']
+            posterior = saved_model['posterior']
+        else:
+            frame_predictor = lstm(args.g_dim+args.z_dim + args.cond_dim, args.g_dim, args.rnn_size, args.predictor_rnn_layers, args.batch_size, device)
+            posterior = gaussian_lstm(args.g_dim, args.z_dim, args.rnn_size, args.posterior_rnn_layers, args.batch_size, device)
+            frame_predictor.apply(init_weights)
+            posterior.apply(init_weights)
+                
+        if args.model_dir != '':
+            decoder = saved_model['decoder']
+            encoder = saved_model['encoder']
+        else:
+            encoder = vgg_encoder(args.g_dim)
+            decoder = vgg_decoder(args.g_dim)
+            encoder.apply(init_weights)
+            decoder.apply(init_weights)
+        
+        # --------- transfer to device ------------------------------------
+        frame_predictor.to(device)
+        posterior.to(device)
+        encoder.to(device)
+        decoder.to(device)
+
+        # --------- load a dataset ------------------------------------
+        train_data = bair_robot_pushing_dataset(args, 'train')
+        train_loader = DataLoader_pro(train_data,
+                                num_workers=args.num_workers,
+                                batch_size=args.batch_size,
+                                shuffle=True,
+                                drop_last=True,
+                                pin_memory=True)
+        train_iterator = iter(train_loader)
+
+        validate_data = bair_robot_pushing_dataset(args, 'validate')
+        validate_loader = DataLoader_pro(validate_data,
+                                num_workers=args.num_workers,
+                                batch_size=args.batch_size,
+                                shuffle=True,
+                                drop_last=True,
+                                pin_memory=True)
+        validate_iterator = iter(validate_loader)
+
+        # ---------------- optimizers ----------------
+        if args.optimizer == 'adam':
+            args.optimizer = optim.Adam
+        elif args.optimizer == 'rmsprop':
+            args.optimizer = optim.RMSprop
+        elif args.optimizer == 'sgd':
+            args.optimizer = optim.SGD
+        else:
+            raise ValueError('Unknown optimizer: %s' % args.optimizer)
+
+        params = list(frame_predictor.parameters()) + list(posterior.parameters()) + list(encoder.parameters()) + list(decoder.parameters())
+        optimizer = args.optimizer(params, lr=args.lr, betas=(args.beta1, 0.999))
+        kl_anneal = kl_annealing(args)
+
+        modules = {
+            'frame_predictor': frame_predictor,
+            'posterior': posterior,
+            'encoder': encoder,
+            'decoder': decoder,
+        }
+        # --------- training loop ------------------------------------
+
+        progress = tqdm(total=args.niter)
+        best_val_psnr = 0
+        tfrs = list()
+        kl_betas = list()
+        PSNRs = list()
+        for epoch in range(start_epoch, start_epoch + niter):
+            frame_predictor.train()
+            posterior.train()
+            encoder.train()
+            decoder.train()
+
+            epoch_loss = 0
+            epoch_mse = 0
+            epoch_kld = 0
+
+            for _ in tqdm(range(args.epoch_size), desc="[Epoch {}]".format(epoch)):
+                try:
+                    seq, cond = next(train_iterator)
+                except StopIteration:
+                    train_iterator = iter(train_loader)
+                    seq, cond = next(train_iterator)
+                seq  = seq.permute((1, 0, 2, 3, 4))
+                cond = cond.permute((1, 0, 2))
+                loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args,device)
+                epoch_loss += loss
+                epoch_mse += mse
+                epoch_kld += kld
+            
+            if epoch >= args.tfr_start_decay_epoch:
+                ### Update teacher forcing ratio ###
+                # raise NotImplementedError
+                args.tfr_decay_step = 1.0 / args.niter;
+                args.tfr -= args.tfr_decay_step;
+                if args.tfr <= args.tfr_lower_bound:
+                    args.tfr = args.tfr_lower_bound
+            kl_betas.append(kl_anneal.get_beta())
+            tfrs.append(args.tfr)
+
+            progress.update(1)
+            with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+                train_record.write(('[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f\n' % (epoch, epoch_loss  / args.epoch_size, epoch_mse / args.epoch_size, epoch_kld / args.epoch_size)))
+            
+            frame_predictor.eval()
+            encoder.eval()
+            decoder.eval()
+            posterior.eval()
+
+            if epoch % 5 == 0:
+                psnr_list = []
+                for _ in tqdm(range(len(validate_data) // args.batch_size)):
+                    try:
+                        validate_seq, validate_cond = next(validate_iterator)
+                    except StopIteration:
+                        validate_iterator = iter(validate_loader)
+                        validate_seq, validate_cond = next(validate_iterator)
+                    validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
+                    validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
+                    pred_seq = pred(validate_seq, validate_cond, modules, args, device)
+                    _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
+                    psnr_list.append(psnr)
+                    
+                ave_psnr = np.mean(np.concatenate(psnr_list))
+                PSNRs.append(ave_psnr)
+
+
+                with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+                    train_record.write(('====================== validate psnr = {:.5f} ========================\n'.format(ave_psnr)))
+
+                if ave_psnr > best_val_psnr:
+                    best_val_psnr = ave_psnr
+                    # save the model
+                    torch.save({
+                        'encoder': encoder,
+                        'decoder': decoder,
+                        'frame_predictor': frame_predictor,
+                        'posterior': posterior,
+                        'args': args,
+                        'last_epoch': epoch},
+                        '%s/model_%7f.pth' %args.log_dir, ave_psnr)
+
+            if epoch % 20 == 0:
                 try:
                     validate_seq, validate_cond = next(validate_iterator)
                 except StopIteration:
                     validate_iterator = iter(validate_loader)
                     validate_seq, validate_cond = next(validate_iterator)
-                validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
-                validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
-                pred_seq = pred(validate_seq, validate_cond, modules, args, device)
-                _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
-                psnr_list.append(psnr)
-                
-            ave_psnr = np.mean(np.concatenate(psnr_list))
-            PSNRs.append(ave_psnr)
 
-
-            with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-                train_record.write(('====================== validate psnr = {:.5f} ========================\n'.format(ave_psnr)))
-
-            if ave_psnr > best_val_psnr:
-                best_val_psnr = ave_psnr
-                # save the model
-                torch.save({
-                    'encoder': encoder,
-                    'decoder': decoder,
-                    'frame_predictor': frame_predictor,
-                    'posterior': posterior,
-                    'args': args,
-                    'last_epoch': epoch},
-                    '%s/model_%7f.pth' %args.log_dir, ave_psnr)
-
-        if epoch % 20 == 0:
-            try:
-                validate_seq, validate_cond = next(validate_iterator)
-            except StopIteration:
-                validate_iterator = iter(validate_loader)
-                validate_seq, validate_cond = next(validate_iterator)
-
-            plot_pred(validate_seq, validate_cond, modules, epoch, args)
+                plot_pred(validate_seq, validate_cond, modules, epoch, args)
 
         
 
