@@ -157,6 +157,11 @@ def main():
         device = 'cuda'
     else:
         device = 'cpu'
+    if device == 'cuda':
+        if args.cuda_index == 0:
+            device = "cuda:0"
+        else:
+            device = "cuda:1";
     
     assert args.n_past + args.n_future <= 30 and args.n_eval <= 30
     assert 0 <= args.tfr and args.tfr <= 1
