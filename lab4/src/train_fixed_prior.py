@@ -201,7 +201,7 @@ def main():
     if mode == "test":
         # assert args.model_dir != '', "model_dir should not be empty!"
         args.log_dir = './lab4/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0001000'
-        saved_model = torch.load('{}/model.pth'.format(args.log_dir))
+        saved_model = torch.load("%s/model.pth" % args.model_dir)
         testing_data = bair_robot_pushing_dataset(args, 'test')
         testing_loader = DataLoader_pro(testing_data,
                                 num_workers=args.num_workers,
