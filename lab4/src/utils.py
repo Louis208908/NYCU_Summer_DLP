@@ -11,6 +11,7 @@ from skimage.metrics import structural_similarity as ssim_metric
 from torch.autograd import Variable
 from torchvision import transforms
 from torchvision.utils import save_image
+import os
 
 
 def kl_criterion(mu, logvar, args):
