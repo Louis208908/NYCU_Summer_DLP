@@ -14,10 +14,9 @@ from torchvision.utils import save_image
 
 
 def kl_criterion(mu, logvar, args):
-  # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-  KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-  KLD /= args.batch_size  
-  return KLD
+    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    KLD /= args.batch_size  
+    return KLD
     
 def eval_seq(gt, pred):
     T = len(gt)
@@ -148,5 +147,181 @@ def pred(x, cond, modules,args,device):
         prediction = torch.stack(prediction)
         return prediction
 
-def plot_pred():
-    raise NotImplementedError
+def plot_pred(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
+    """Plot predictions with z sampled from N(0, I)"""
+    # raise NotImplementedError
+    pred_seq = pred(validate_seq, validate_cond, modules, args, device)
+    print("[Epoch {}] Saving predicted images & GIF...".format(epoch))
+    os.makedirs("{}/gen/epoch-{}-pred".format(args.log_dir, epoch), exist_ok=True)
+    images, pred_frames, gt_frames = [], [], []
+    sample_seq, gt_seq = pred_seq[:, sample_idx, :, :, :], validate_seq[:, sample_idx, :, :, :]
+    for frame_idx in range(sample_seq.shape[0]):
+        img_file = "{}/gen/epoch-{}-pred/{}.png".format(args.log_dir, epoch, frame_idx)
+        save_image(sample_seq[frame_idx], img_file)
+        images.append(imageio.imread(img_file))
+        pred_frames.append(sample_seq[frame_idx])
+        os.remove(img_file)
+
+        gt_frames.append(gt_seq[frame_idx])
+
+    pred_grid = make_grid(pred_frames, nrow=sample_seq.shape[0])
+    gt_grid   = make_grid(gt_frames  , nrow=gt_seq.shape[0])
+    save_image(pred_grid, "{}/gen/epoch-{}-pred/pred_grid.png".format(args.log_dir, epoch))
+    save_image(gt_grid  , "{}/gen/epoch-{}-pred/gt_grid.png".format(args.log_dir, epoch))
+    imageio.mimsave("{}/gen/epoch-{}-pred/animation.gif".format(args.log_dir, epoch), images)
+
+
+def plot_rec(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
+	"""Plot predictions with z sampled from encoder & gaussian_lstm"""
+	#raise NotImplementedError
+
+	## Transfer to device
+	validate_seq  = validate_seq.to(device)
+	validate_cond = validate_cond.to(device)
+
+	with torch.no_grad():
+		modules["frame_predictor"].hidden = modules["frame_predictor"].init_hidden()
+		modules["posterior"].hidden = modules["posterior"].init_hidden()
+
+		x_in = validate_seq[0]
+		cond = validate_cond
+
+		pred_seq = []
+		pred_seq.append(x_in)
+
+		## Iterate through 12 frames
+		for frame_idx in range(1, args.n_past + args.n_future):
+			## Encode the image at step (t-1)
+			if args.last_frame_skip or frame_idx < args.n_past:
+				h_in, skip = modules["encoder"](x_in)
+			else:
+				h_in, _    = modules["encoder"](x_in)
+
+			## Obtain the latent vector z at step (t)
+			h_t, _    = modules["encoder"](validate_seq[frame_idx])
+			#z_t, _, _ = modules["posterior"](h_t)
+			_, z_t, _ = modules["posterior"](h_t) ## Take the mean
+
+			## Decode the image based on h_in & z_t
+			if frame_idx < args.n_past:
+				modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_idx - 1]], dim=1))
+				x_in = validate_seq[frame_idx]
+			else:
+				g_t  = modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_idx - 1]], dim=1))
+				x_in = modules["decoder"]([g_t, skip])
+
+			pred_seq.append(x_in)
+
+	pred_seq = torch.stack(pred_seq)
+
+	print("[Epoch {}] Saving reconstructed images & GIF...".format(epoch))
+	os.makedirs("{}/gen/epoch-{}-rec".format(args.log_dir, epoch), exist_ok=True)
+
+	## First one of this batch
+	images, frames = [], []
+	sample_seq = pred_seq[:, sample_idx, :, :, :]
+	for frame_idx in range(sample_seq.shape[0]):
+		img_file = "{}/gen/epoch-{}-rec/{}.png".format(args.log_dir, epoch, frame_idx)
+		save_image(sample_seq[frame_idx], img_file)
+		images.append(imageio.imread(img_file))
+		frames.append(sample_seq[frame_idx])
+		os.remove(img_file)
+
+	grid = make_grid(frames, nrow=sample_seq.shape[0])
+	save_image(grid, "{}/gen/epoch-{}-rec/rec_grid.png".format(args.log_dir, epoch))
+	imageio.mimsave("{}/gen/epoch-{}-rec/animation.gif".format(args.log_dir, epoch), images)
+
+
+
+def plot_learning_data():
+	"""Plot losses, psnr, kl annealing beta & teacher forcing ratio"""
+	from mpl_axes_aligner import align
+
+	exp_names = ["monotonic", "cyclical"]
+	for exp_name in exp_names:
+		records = {
+			"epoch"     : [], 
+			"loss"      : [], 
+			"mse"       : [], 
+			"kld"       : [], 
+			"tfr"       : [], 
+			"beta"      : [], 
+			"epoch_psnr": [], 
+			"psnr"      : []
+		}
+		
+		with open("../logs/fp/{}/train_record.txt".format(exp_name)) as f_record:
+			for line in f_record.readlines():
+				line = line.strip().rstrip()
+				if line.startswith("[epoch:"):
+					epoch = int(line.split("]")[0].split(":")[-1].strip().rstrip()) + 1
+					loss  = float(line.split("|")[0].split(":")[-1].strip().rstrip())
+					mse   = float(line.split("|")[1].split(":")[-1].strip().rstrip())
+					kld   = float(line.split("|")[2].split(":")[-1].strip().rstrip())
+					tfr   = float(line.split("|")[3].split(":")[-1].strip().rstrip())
+					beta  = float(line.split("|")[4].split(":")[-1].strip().rstrip())
+		
+					records["epoch"].append(epoch)
+					records["loss"].append(loss)
+					records["mse"].append(mse)
+					records["kld"].append(kld)
+					records["tfr"].append(tfr)
+					records["beta"].append(beta)
+				elif "validate psnr" in line:
+					valid_psnr = float(line.replace("=", "").strip().rstrip().split(" ")[-1])
+		
+					records["epoch_psnr"].append(epoch)
+					records["psnr"].append(valid_psnr)
+		
+		## Plot
+		fig, main_ax = plt.subplots()
+		sub_ax1 = main_ax.twinx()
+		
+		cmap = plt.get_cmap("tab10")
+		
+		p1, = main_ax.plot(records["epoch"]     , records["kld"] , color=cmap(0), label="KLD Loss")
+		p3, = main_ax.plot(records["epoch"]     , records["loss"], color=cmap(2), label="Total Loss")
+		p2, = main_ax.plot(records["epoch"]     , records["mse"] , color=cmap(1), label="MSE Loss")
+		p4, = sub_ax1.plot(records["epoch"]     , records["tfr"] , color=cmap(4), linestyle=":", label="Teacher Forcing Ratio")
+		p5, = sub_ax1.plot(records["epoch"]     , records["beta"], color=cmap(5), linestyle=":", label="KL Anneal Beta")
+		
+		main_ax.set_xlabel("Epoch")
+		main_ax.set_ylabel("Loss")
+		sub_ax1.set_ylabel("Teacher Forcing Ratio / KL Annealing Beta")
+		
+		main_ax.set_ylim([0, 0.0265])
+		main_ax.set_yticks([0, 0.005, 0.01, 0.015, 0.02, 0.025])
+		align.yaxes(main_ax, 0.0, sub_ax1, 0.0, 0.05)
+		
+		main_ax.legend(handles=[p1, p2, p3, p4, p5], loc="center right")
+		
+		plt.title("{} KL Annealing".format(exp_name.capitalize()))
+		plt.tight_layout()
+		plt.savefig("../logs/fp/{}/loss_ratio_{}.png".format(exp_name, exp_name))
+
+def plot_psnr():
+	exp_names = ["monotonic", "cyclical"]
+
+	plt.figure()
+	for exp_name in exp_names:
+		records = {"epoch": [], "psnr": []}
+		with open("../logs/fp/{}/train_record.txt".format(exp_name)) as f_record:
+			for line in f_record.readlines():
+				line = line.strip().rstrip()
+				if line.startswith("[epoch:"):
+					epoch = int(line.split("]")[0].split(":")[-1].strip().rstrip()) + 1
+				if "validate psnr" in line:
+					valid_psnr = float(line.replace("=", "").strip().rstrip().split(" ")[-1])
+
+					records["epoch"].append(epoch)
+					records["psnr" ].append(valid_psnr)
+
+		plt.plot(records["epoch"], records["psnr"], label=exp_name.capitalize())
+
+	plt.xlabel("Epoch")
+	plt.ylabel("PSNR")
+
+	plt.legend()
+	plt.title("Learning Curves of PSNR")
+	plt.tight_layout()
+	plt.savefig("../logs/fp/psnr.png")
