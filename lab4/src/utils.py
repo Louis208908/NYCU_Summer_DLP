@@ -10,7 +10,7 @@ from skimage.metrics import peak_signal_noise_ratio as psnr_metric
 from skimage.metrics import structural_similarity as ssim_metric
 from torch.autograd import Variable
 from torchvision import transforms
-from torchvision.utils import save_image
+from torchvision.utils import save_image,make_grid
 import os
 
 
