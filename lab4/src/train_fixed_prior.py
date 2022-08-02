@@ -25,16 +25,16 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--lr', default=0.002, type=float, help='learning rate')
     parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
-    parser.add_argument('--batch_size', default=30, type=int, help='batch size')
+    parser.add_argument('--batch_size', default=20, type=int, help='batch size')
     parser.add_argument('--log_dir', default='./lab4', help='base directory to save logs')
     parser.add_argument('--model_dir', default='', help='base directory to save logs')
     parser.add_argument('--data_root', default='./lab4', help='root directory for data')
     parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
     parser.add_argument('--niter', type=int, default=100, help='number of epochs to train for')
-    parser.add_argument('--epoch_size', type=int, default=150, help='epoch size')
+    parser.add_argument('--epoch_size', type=int, default=600, help='epoch size')
     parser.add_argument('--tfr', type=float, default=1.0, help='teacher forcing ratio (0 ~ 1)')
     parser.add_argument('--tfr_start_decay_epoch', type=int, default=0, help='The epoch that teacher forcing ratio become decreasing')
-    parser.add_argument('--tfr_decay_step', type=float, default=0, help='The decay step size of teacher forcing ratio (0 ~ 1)')
+    parser.add_argument('--tfr_decay_step', type=float, default=0.01, help='The decay step size of teacher forcing ratio (0 ~ 1)')
     parser.add_argument('--tfr_lower_bound', type=float, default=0, help='The lower bound of teacher forcing ratio for scheduling teacher forcing ratio (0 ~ 1)')
     parser.add_argument('--kl_anneal_cyclical', default=False, action='store_true', help='use cyclical mode')
     parser.add_argument('--kl_anneal_ratio', type=float, default=0.5, help='The decay ratio of kl annealing')
@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=4, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
     parser.add_argument('--cuda', default=False, action='store_true')  
-    parser.add_argument('--cuda_index', default=0, type = int, help='to identify which device to use')
+    parser.add_argument('--cuda_index', default=1, type = int, help='to identify which device to use')
 
     args = parser.parse_args()
     return args
@@ -162,7 +162,7 @@ def main():
         if args.cuda_index == 0:
             device = "cuda:0"
         else:
-            device = "cuda:1";
+            device = "cuda:1"
     
     assert args.n_past + args.n_future <= 30 and args.n_eval <= 30
     assert 0 <= args.tfr and args.tfr <= 1
@@ -181,7 +181,7 @@ def main():
         args.log_dir = '%s/continued' % args.log_dir
         start_epoch = saved_model['last_epoch']
     else:
-        timestr = time.strftime("%Y%m%d-%H%M%S")
+        timestr = time.strftime("%Y%m%d-%H%M%S-")
         name = 'rnn_size=%d-predictor-posterior-rnn_layers=%d-%d-n_past=%d-n_future=%d-lr=%.4f-g_dim=%d-z_dim=%d-last_frame_skip=%s-beta=%.7f'\
             % (args.rnn_size, args.predictor_rnn_layers, args.posterior_rnn_layers, args.n_past, args.n_future, args.lr, args.g_dim, args.z_dim, args.last_frame_skip, args.beta)
         timestr += name
