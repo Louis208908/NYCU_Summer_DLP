@@ -182,8 +182,8 @@ def main():
         start_epoch = saved_model['last_epoch']
     else:
         timestr = time.strftime("%Y%m%d-%H%M%S-")
-        name = 'rnn_size=%d-predictor-posterior-rnn_layers=%d-%d-n_past=%d-n_future=%d-lr=%.4f-g_dim=%d-z_dim=%d-last_frame_skip=%s-beta=%.7f'\
-            % (args.rnn_size, args.predictor_rnn_layers, args.posterior_rnn_layers, args.n_past, args.n_future, args.lr, args.g_dim, args.z_dim, args.last_frame_skip, args.beta)
+        name = '-lr=%.4f-beta=%.7f-optim=%7s'\
+            % (args.lr,args.beta,args.optimizer)
         timestr += name
         args.log_dir = '%s/%s' % (args.log_dir, timestr)
         niter = args.niter
@@ -226,11 +226,6 @@ def main():
         decoder.apply(init_weights)
     
     # --------- transfer to device ------------------------------------
-    # frame_predictor = nn.DataParallel(frame_predictor)
-    # posterior = nn.DataParallel(posterior)
-    # encoder = nn.DataParallel(encoder)
-    # decoder = nn.DataParallel(decoder)
-
     frame_predictor.to(device)
     posterior.to(device)
     encoder.to(device)
@@ -268,7 +263,6 @@ def main():
 
     params = list(frame_predictor.parameters()) + list(posterior.parameters()) + list(encoder.parameters()) + list(decoder.parameters())
     optimizer = args.optimizer(params, lr=args.lr, betas=(args.beta1, 0.999))
-    # optimizer = nn.DataParallel(optimizer)
     kl_anneal = kl_annealing(args)
 
     modules = {
@@ -357,16 +351,18 @@ def main():
                     'posterior': posterior,
                     'args': args,
                     'last_epoch': epoch},
-                    '%s/model.pth' % args.log_dir)
+                    '%s/model_%7f.pth' %args.log_dir, ave_psnr)
 
-        # if epoch % 20 == 0:
-        #     try:
-        #         validate_seq, validate_cond = next(validate_iterator)
-        #     except StopIteration:
-        #         validate_iterator = iter(validate_loader)
-        #         validate_seq, validate_cond = next(validate_iterator)
+        if epoch % 20 == 0:
+            try:
+                validate_seq, validate_cond = next(validate_iterator)
+            except StopIteration:
+                validate_iterator = iter(validate_loader)
+                validate_seq, validate_cond = next(validate_iterator)
 
-        #     plot_pred(validate_seq, validate_cond, modules, epoch, args)
+            plot_pred(validate_seq, validate_cond, modules, epoch, args)
+
+        
 
 if __name__ == '__main__':
     main()
