@@ -224,9 +224,15 @@ def main():
 
     elif mode == "train":
         timestr = time.strftime("%Y%m%d-%H%M%S-")
-        name = '-lr=%.4f-beta=%.7f-optim=%7s'\
-            % (args.lr,args.beta,args.optimizer)
+        name = '-lr=%.4f-beta=%.7f-optim=%7s-niter=%d-epoch_size=%d'\
+            % (args.lr,args.beta,args.optimizer,args.niter,args.epoch_size)
         timestr += name
+        if args.anneal_cyclical:
+            timestr += "-cyclical"
+        else:
+            timestr += "-monotonic"
+
+
         args.log_dir = '%s/%s' % (args.log_dir, timestr)
         niter = args.niter
         start_epoch = 0
@@ -247,6 +253,8 @@ def main():
 
         with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
             train_record.write('args: {}\n'.format(args))
+        with open('./{}/run_command.txt'.format(args.log_dir), 'a') as train_record:
+            train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/train_fixed_prior.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch));
 
         # ------------ build the models  --------------
 
