@@ -227,7 +227,7 @@ def main():
         name = '-lr=%.4f-beta=%.7f-optim=%7s-niter=%d-epoch_size=%d'\
             % (args.lr,args.beta,args.optimizer,args.niter,args.epoch_size)
         timestr += name
-        if args.anneal_cyclical:
+        if args.kl_anneal_cyclical:
             timestr += "-cyclical"
         else:
             timestr += "-monotonic"
@@ -239,7 +239,7 @@ def main():
         os.makedirs(args.log_dir, exist_ok=True)
         os.makedirs('%s/gen/' % args.log_dir, exist_ok=True)
 
-
+        # a comment to activate git
 
         print("Random Seed: ", args.seed)
         random.seed(args.seed)
