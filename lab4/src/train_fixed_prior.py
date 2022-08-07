@@ -62,7 +62,7 @@ def parse_args():
     return args
 
 def train(x, cond, modules, optimizer, kl_anneal, args,device):
-    if args,debug:
+    if args.debug:
         print("seq shape:")
         print(x.shape)
         print("cond shape:")
