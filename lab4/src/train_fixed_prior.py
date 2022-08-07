@@ -52,7 +52,7 @@ def parse_args():
     parser.add_argument('--g_dim', type=int, default=128, help='dimensionality of encoder output vector and decoder input vector')
     parser.add_argument("--cond_dim", type=int  , default=7, help="dimensionality of condition")
     parser.add_argument('--beta', type=float, default=0.0001, help='weighting on KL to prior')
-    parser.add_argument('--num_workers', type=int, default=1, help='number of data loading threads')
+    parser.add_argument('--num_workers', type=int, default=8, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
     parser.add_argument('--cuda', default=False, action='store_true')  
     parser.add_argument('--cuda_index', default=1, type = int, help='to identify which device to use')
@@ -214,7 +214,7 @@ def main():
         testing_loader = DataLoader_pro(testing_data,
                                 num_workers=args.num_workers,
                                 batch_size=args.batch_size,
-                                shuffle=True,
+                                shuffle=False,
                                 drop_last=True,
                                 pin_memory=True)
         testing_iterator = iter(testing_loader)
@@ -294,26 +294,21 @@ def main():
 
         # --------- load a dataset ------------------------------------
         train_data = bair_robot_pushing_dataset(args, 'train')
-        train_loader = DataLoader(train_data,
+        train_loader = DataLoader_pro(train_data,
                                 num_workers=args.num_workers,
                                 batch_size=args.batch_size,
                                 shuffle=True,
-                                drop_last=True)
+                                drop_last=True,
+                                pin_memory = True)
         train_iterator = iter(train_loader)
 
         validate_data = bair_robot_pushing_dataset(args, 'validate')
-        # validate_loader = DataLoader_pro(validate_data,
-        #                         num_workers=args.num_workers,
-        #                         batch_size=args.batch_size,
-        #                         shuffle=True,
-        #                         drop_last=True,
-        #                         pin_memory=True)
-        validate_loader = DataLoader(validate_data,
+        validate_loader = DataLoader_pro(validate_data,
                                 num_workers=args.num_workers,
                                 batch_size=args.batch_size,
-                                shuffle=False,
+                                shuffle=True,
                                 drop_last=True,
-                                )
+                                pin_memory=True)
         validate_iterator = iter(validate_loader)
 
         # ---------------- optimizers ----------------
