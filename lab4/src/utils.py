@@ -119,34 +119,35 @@ def init_weights(m):
 def pred(x, cond, modules,args,device):
     x  = x.to(device)
     cond = cond.to(device)
-
-    with torch.no_grad():
-        prediction = list()
-        #record the prediction seq
-        modules["frame_predictor"].hidden = modules["frame_predictor"].init_hidden()
-        modules["posterior"].hidden = modules["posterior"].init_hidden()
-        # 要這麼做是因為這是個lstm 我們要把過去資料清掉 不然就會記憶中就會有不該存在的資料
-        x_input = x[0];
-        for frame_id in range(args.n_past + args.n_future):
-            # if args.last_frame_skip or frame_id < args.n_past:
-            h_in, _ = modules["encoder"](x_input)
-            if frame_id < args.n_past:
-                h_t, _ = modules["encoder"](x[frame_id])
-                _ , z_t, _ = modules["posterior"](h_t)
-            else:
-               torch.cuda.FloatTensor(args.batch_size, args.z_dim).normal_()
+    autocast = torch.cuda.amp.autocast
+    with autocast():
+        with torch.no_grad():
+            prediction = list()
+            #record the prediction seq
+            modules["frame_predictor"].hidden = modules["frame_predictor"].init_hidden()
+            modules["posterior"].hidden = modules["posterior"].init_hidden()
+            # 要這麼做是因為這是個lstm 我們要把過去資料清掉 不然就會記憶中就會有不該存在的資料
+            x_input = x[0];
+            for frame_id in range(args.n_past + args.n_future):
+                # if args.last_frame_skip or frame_id < args.n_past:
+                h_in, _ = modules["encoder"](x_input)
+                if frame_id < args.n_past:
+                    h_t, _ = modules["encoder"](x[frame_id])
+                    _ , z_t, _ = modules["posterior"](h_t)
+                else:
+                torch.cuda.FloatTensor(args.batch_size, args.z_dim).normal_()
+                
+                if frame_id < args.n_past:
+                    modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_id - 1]], dim=1))
+                    x_input = x[frame_id]
+                else:
+                    decoded_obj = modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_id - 1]], dim=1))
+                    x_input = modules["decoder"]([decoded_obj, _])
+                
+                prediction.append(x_input)
             
-            if frame_id < args.n_past:
-                modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_id - 1]], dim=1))
-                x_input = x[frame_id]
-            else:
-                decoded_obj = modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_id - 1]], dim=1))
-                x_input = modules["decoder"]([decoded_obj, _])
-            
-            prediction.append(x_input)
-        
-        prediction = torch.stack(prediction)
-        return prediction
+            prediction = torch.stack(prediction)
+            return prediction
 
 def plot_pred(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
     """Plot predictions with z sampled from N(0, I)"""
