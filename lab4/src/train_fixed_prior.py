@@ -52,7 +52,7 @@ def parse_args():
     parser.add_argument('--g_dim', type=int, default=128, help='dimensionality of encoder output vector and decoder input vector')
     parser.add_argument("--cond_dim", type=int  , default=7, help="dimensionality of condition")
     parser.add_argument('--beta', type=float, default=0.0001, help='weighting on KL to prior')
-    parser.add_argument('--num_workers', type=int, default=4, help='number of data loading threads')
+    parser.add_argument('--num_workers', type=int, default=2, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
     parser.add_argument('--cuda', default=False, action='store_true')  
     parser.add_argument('--cuda_index', default=1, type = int, help='to identify which device to use')
@@ -89,7 +89,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
                     h_previous, _ = encoded_seq[ i - 1 ]
                 else:
                     if use_teacher_forcing:
-                        h_previous,_ = encoded_seq[ i - 1]
+                        h_previous,_ = encoded_seq[ i - 1 ]
                     else:
                         h_previous,_ = modules["encoder"](x_pred)
                 
@@ -288,17 +288,22 @@ def main():
                                 num_workers=args.num_workers,
                                 batch_size=args.batch_size,
                                 shuffle=True,
-                                drop_last=True,
-                                pin_memory=True)
+                                drop_last=True)
         train_iterator = iter(train_loader)
 
         validate_data = bair_robot_pushing_dataset(args, 'validate')
-        validate_loader = DataLoader_pro(validate_data,
+        # validate_loader = DataLoader_pro(validate_data,
+        #                         num_workers=args.num_workers,
+        #                         batch_size=args.batch_size,
+        #                         shuffle=True,
+        #                         drop_last=True,
+        #                         pin_memory=True)
+        validate_loader = DataLoader(validate_data,
                                 num_workers=args.num_workers,
                                 batch_size=args.batch_size,
-                                shuffle=True,
+                                shuffle=False,
                                 drop_last=True,
-                                pin_memory=True)
+                                )
         validate_iterator = iter(validate_loader)
 
         # ---------------- optimizers ----------------
@@ -358,8 +363,8 @@ def main():
                 args.tfr -= args.tfr_decay_step;
                 if args.tfr <= args.tfr_lower_bound:
                     args.tfr = args.tfr_lower_bound
-            kl_betas.append(kl_anneal.get_beta())
-            tfrs.append(args.tfr)
+            # kl_betas.append(kl_anneal.get_beta())
+            # tfrs.append(args.tfr)
 
             progress.update(1)
             with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
@@ -385,7 +390,7 @@ def main():
                     psnr_list.append(psnr)
                     
                 ave_psnr = np.mean(np.concatenate(psnr_list))
-                PSNRs.append(ave_psnr)
+                # PSNRs.append(ave_psnr)
 
 
                 with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
