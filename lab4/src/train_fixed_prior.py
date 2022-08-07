@@ -61,10 +61,10 @@ def parse_args():
     return args
 
 def train(x, cond, modules, optimizer, kl_anneal, args,device):
-    print("seq shape:")
-    print(x.shape)
-    print("cond shape:")
-    print(cond.shape)
+    # print("seq shape:")
+    # print(x.shape)
+    # print("cond shape:")
+    # print(cond.shape)
     scaler = torch.cuda.amp.GradScaler()
     autocast = torch.cuda.amp.autocast
     modules['frame_predictor'].zero_grad()
