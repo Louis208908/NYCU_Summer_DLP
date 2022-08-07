@@ -335,9 +335,9 @@ def main():
 
         progress = tqdm(total=args.niter)
         best_val_psnr = 0
-        # tfrs = list()
-        # kl_betas = list()
-        # PSNRs = list()
+        tfrs = list()
+        kl_betas = list()
+        PSNRs = list()
         for epoch in range(start_epoch, start_epoch + niter):
             frame_predictor.train()
             posterior.train()
@@ -369,12 +369,12 @@ def main():
                 args.tfr -= args.tfr_decay_step;
                 if args.tfr <= args.tfr_lower_bound:
                     args.tfr = args.tfr_lower_bound
-            # kl_betas.append(kl_anneal.get_beta())
-            # tfrs.append(args.tfr)
+            kl_betas.append(kl_anneal.get_beta())
+            tfrs.append(args.tfr)
 
             progress.update(1)
-            # with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-            #     train_record.write(('[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f\n' % (epoch, epoch_loss  / args.epoch_size, epoch_mse / args.epoch_size, epoch_kld / args.epoch_size)))
+            with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+                train_record.write(('[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f\n' % (epoch, epoch_loss  / args.epoch_size, epoch_mse / args.epoch_size, epoch_kld / args.epoch_size)))
             
             frame_predictor.eval()
             encoder.eval()
@@ -397,11 +397,11 @@ def main():
                         psnr_list.append(psnr)
                         
                     ave_psnr = np.mean(np.concatenate(psnr_list))
-                    # PSNRs.append(ave_psnr)
+                    PSNRs.append(ave_psnr)
 
 
-                    # with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-                    #     train_record.write(('====================== validate psnr = {:.5f} ========================\n'.format(ave_psnr)))
+                    with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+                        train_record.write(('====================== validate psnr = {:.5f} ========================\n'.format(ave_psnr)))
 
                     if ave_psnr > best_val_psnr:
                         best_val_psnr = ave_psnr
