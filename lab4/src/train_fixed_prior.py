@@ -86,7 +86,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
                 h_t , _ = encoded_seq[i];
 
                 if args.last_frame_skip or i < args.n_past:
-                    h_previous, _ = encoded_seq[ i - 1 ]
+                    h_previous, skip = encoded_seq[ i - 1 ]
                 else:
                     if use_teacher_forcing:
                         h_previous,_ = encoded_seq[ i - 1 ]
@@ -96,9 +96,12 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
                 latent_var, mu, logvar = modules["posterior"](h_t)
 
                 lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)
+                lstm_input = lstm_input.to(device)
                 
                 decoded_object = modules["frame_predictor"](lstm_input)
-                x_pred = modules["decoder"]([decoded_object, _])
+                decoded_object = decoded_object.to(device)
+                skip = skip.to(device)
+                x_pred = modules["decoder"]([decoded_object, skip])
 
                 mse += nn.MSELoss()(x[i], x_pred)
                 kld += kl_criterion(mu,logvar,args)
@@ -284,7 +287,7 @@ def main():
 
         # --------- load a dataset ------------------------------------
         train_data = bair_robot_pushing_dataset(args, 'train')
-        train_loader = DataLoader_pro(train_data,
+        train_loader = DataLoader(train_data,
                                 num_workers=args.num_workers,
                                 batch_size=args.batch_size,
                                 shuffle=True,
@@ -330,9 +333,9 @@ def main():
 
         progress = tqdm(total=args.niter)
         best_val_psnr = 0
-        tfrs = list()
-        kl_betas = list()
-        PSNRs = list()
+        # tfrs = list()
+        # kl_betas = list()
+        # PSNRs = list()
         for epoch in range(start_epoch, start_epoch + niter):
             frame_predictor.train()
             posterior.train()
@@ -367,8 +370,8 @@ def main():
             # tfrs.append(args.tfr)
 
             progress.update(1)
-            with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-                train_record.write(('[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f\n' % (epoch, epoch_loss  / args.epoch_size, epoch_mse / args.epoch_size, epoch_kld / args.epoch_size)))
+            # with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+            #     train_record.write(('[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f\n' % (epoch, epoch_loss  / args.epoch_size, epoch_mse / args.epoch_size, epoch_kld / args.epoch_size)))
             
             frame_predictor.eval()
             encoder.eval()
@@ -376,8 +379,41 @@ def main():
             posterior.eval()
 
             if epoch % 2 == 0:
-                psnr_list = []
-                for _ in tqdm(range(len(validate_data) // args.batch_size)):
+                with torch.no_grad():
+                    psnr_list = []
+                    for _ in tqdm(range(len(validate_data) // args.batch_size)):
+                        try:
+                            validate_seq, validate_cond = next(validate_iterator)
+                        except StopIteration:
+                            validate_iterator = iter(validate_loader)
+                            validate_seq, validate_cond = next(validate_iterator)
+                        validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
+                        validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
+                        pred_seq = pred(validate_seq, validate_cond, modules, args, device)
+                        _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
+                        psnr_list.append(psnr)
+                        
+                    ave_psnr = np.mean(np.concatenate(psnr_list))
+                    # PSNRs.append(ave_psnr)
+
+
+                    # with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+                    #     train_record.write(('====================== validate psnr = {:.5f} ========================\n'.format(ave_psnr)))
+
+                    if ave_psnr > best_val_psnr:
+                        best_val_psnr = ave_psnr
+                        # save the model
+                        torch.save({
+                            'encoder': encoder,
+                            'decoder': decoder,
+                            'frame_predictor': frame_predictor,
+                            'posterior': posterior,
+                            'args': args,
+                            'last_epoch': epoch},
+                            '{}/model_{}.pth'.format(args.log_dir, ave_psnr))
+
+            if epoch % 10 == 0:
+                with torch.no_grad():
                     try:
                         validate_seq, validate_cond = next(validate_iterator)
                     except StopIteration:
@@ -385,38 +421,7 @@ def main():
                         validate_seq, validate_cond = next(validate_iterator)
                     validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
                     validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
-                    pred_seq = pred(validate_seq, validate_cond, modules, args, device)
-                    _, _, psnr = finn_eval_seq(validate_seq[args.n_past:], pred_seq[args.n_past:])
-                    psnr_list.append(psnr)
-                    
-                ave_psnr = np.mean(np.concatenate(psnr_list))
-                # PSNRs.append(ave_psnr)
-
-
-                with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-                    train_record.write(('====================== validate psnr = {:.5f} ========================\n'.format(ave_psnr)))
-
-                if ave_psnr > best_val_psnr:
-                    best_val_psnr = ave_psnr
-                    # save the model
-                    torch.save({
-                        'encoder': encoder,
-                        'decoder': decoder,
-                        'frame_predictor': frame_predictor,
-                        'posterior': posterior,
-                        'args': args,
-                        'last_epoch': epoch},
-                        '{}/model_{}.pth'.format(args.log_dir, ave_psnr))
-
-            if epoch % 10 == 0:
-                try:
-                    validate_seq, validate_cond = next(validate_iterator)
-                except StopIteration:
-                    validate_iterator = iter(validate_loader)
-                    validate_seq, validate_cond = next(validate_iterator)
-                validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
-                validate_cond = validate_cond.permute((1, 0, 2))[:args.n_past + args.n_future]
-                plot_pred(validate_seq, validate_cond, modules, epoch, args,device)
+                    plot_pred(validate_seq, validate_cond, modules, epoch, args,device)
 
         
 
