@@ -52,7 +52,7 @@ def parse_args():
     parser.add_argument('--g_dim', type=int, default=128, help='dimensionality of encoder output vector and decoder input vector')
     parser.add_argument("--cond_dim", type=int  , default=7, help="dimensionality of condition")
     parser.add_argument('--beta', type=float, default=0.0001, help='weighting on KL to prior')
-    parser.add_argument('--num_workers', type=int, default=2, help='number of data loading threads')
+    parser.add_argument('--num_workers', type=int, default=1, help='number of data loading threads')
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
     parser.add_argument('--cuda', default=False, action='store_true')  
     parser.add_argument('--cuda_index', default=1, type = int, help='to identify which device to use')
@@ -74,10 +74,10 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     mse = 0
     kld = 0
     use_teacher_forcing = True if random.random() < args.tfr else False
+    x = x.to(device)
+    cond = cond.to(device)
     for i in range(1, args.n_past + args.n_future):
         # raise NotImplementedError
-        x = x.to(device)
-        cond = cond.to(device)
 
         with autocast():
             encoded_seq = [modules["encoder"](x[i]) for i in range(args.n_past + args.n_future)];
