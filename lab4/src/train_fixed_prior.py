@@ -56,15 +56,17 @@ def parse_args():
     parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
     parser.add_argument('--cuda', default=False, action='store_true')  
     parser.add_argument('--cuda_index', default=1, type = int, help='to identify which device to use')
+    parser.add_argument('--debug', default=False, action='store_true')  
 
     args = parser.parse_args()
     return args
 
 def train(x, cond, modules, optimizer, kl_anneal, args,device):
-    # print("seq shape:")
-    # print(x.shape)
-    # print("cond shape:")
-    # print(cond.shape)
+    if args,debug:
+        print("seq shape:")
+        print(x.shape)
+        print("cond shape:")
+        print(cond.shape)
     scaler = torch.cuda.amp.GradScaler()
     autocast = torch.cuda.amp.autocast
     modules['frame_predictor'].zero_grad()
