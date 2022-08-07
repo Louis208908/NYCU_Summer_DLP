@@ -105,7 +105,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
                 # lstm_input = lstm_input.to(device)
                 
                 decoded_object = modules["frame_predictor"](lstm_input)
-                decoded_object = decoded_object.to(device)
+                # decoded_object = decoded_object.to(device)
                 # skip = skip.to(device)
                 x_pred = modules["decoder"]([decoded_object, skip])
 
@@ -360,8 +360,9 @@ def main():
                 except StopIteration:
                     train_iterator = iter(train_loader)
                     seq, cond = next(train_iterator)
-                seq  = seq.permute((1, 0, 2, 3, 4))
-                cond = cond.permute((1, 0, 2))
+
+                seq  = seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
+                cond = cond.permute((1, 0, 2))[:args.n_past + args.n_future]
                 loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args,device)
                 epoch_loss += loss
                 epoch_mse += mse
