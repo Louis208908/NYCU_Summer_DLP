@@ -100,7 +100,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
                 
                 decoded_object = modules["frame_predictor"](lstm_input)
                 decoded_object = decoded_object.to(device)
-                skip = skip.to(device)
+                # skip = skip.to(device)
                 x_pred = modules["decoder"]([decoded_object, skip])
 
                 mse += nn.MSELoss()(x[i], x_pred)
