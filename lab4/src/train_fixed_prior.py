@@ -102,7 +102,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
                 latent_var, mu, logvar = modules["posterior"](h_t)
 
                 lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)
-                lstm_input = lstm_input.to(device)
+                # lstm_input = lstm_input.to(device)
                 
                 decoded_object = modules["frame_predictor"](lstm_input)
                 decoded_object = decoded_object.to(device)
@@ -245,8 +245,9 @@ def main():
         args.log_dir = '%s/%s' % (args.log_dir, timestr)
         niter = args.niter
         start_epoch = 0
-        os.makedirs(args.log_dir, exist_ok=True)
-        os.makedirs('%s/gen/' % args.log_dir, exist_ok=True)
+        if not args.debug:
+            os.makedirs(args.log_dir, exist_ok=True)
+            os.makedirs('%s/gen/' % args.log_dir, exist_ok=True)
 
         # a comment to activate git
 
