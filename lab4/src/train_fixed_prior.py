@@ -69,6 +69,7 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
         print(cond.shape)
     scaler = torch.cuda.amp.GradScaler()
     autocast = torch.cuda.amp.autocast
+
     modules['frame_predictor'].zero_grad()
     modules['posterior'].zero_grad()
     modules['encoder'].zero_grad()
@@ -85,41 +86,41 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     for i in range(1, args.n_past + args.n_future):
         # raise NotImplementedError
 
-        with autocast():
-            encoded_seq = [modules["encoder"](x[i]) for i in range(args.n_past + args.n_future)];
+        # with autocast():
+        encoded_seq = [modules["encoder"](x[i]) for i in range(args.n_past + args.n_future)];
 
-            for i in range(1, args.n_past + args.n_future):
-                h_t , _ = encoded_seq[i];
+        for i in range(1, args.n_past + args.n_future):
+            h_t , _ = encoded_seq[i];
 
-                if args.last_frame_skip or i < args.n_past:
-                    h_previous, skip = encoded_seq[ i - 1 ]
+            if args.last_frame_skip or i < args.n_past:
+                h_previous, skip = encoded_seq[ i - 1 ]
+            else:
+                if use_teacher_forcing:
+                    h_previous,_ = encoded_seq[ i - 1 ]
                 else:
-                    if use_teacher_forcing:
-                        h_previous,_ = encoded_seq[ i - 1 ]
-                    else:
-                        h_previous,_ = modules["encoder"](x_pred)
-                
-                latent_var, mu, logvar = modules["posterior"](h_t)
+                    h_previous,_ = modules["encoder"](x_pred)
+            
+            latent_var, mu, logvar = modules["posterior"](h_t)
 
-                lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)
-                # lstm_input = lstm_input.to(device)
-                
-                decoded_object = modules["frame_predictor"](lstm_input)
-                # decoded_object = decoded_object.to(device)
-                # skip = skip.to(device)
-                x_pred = modules["decoder"]([decoded_object, skip])
+            lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)
+            # lstm_input = lstm_input.to(device)
+            
+            decoded_object = modules["frame_predictor"](lstm_input)
+            # decoded_object = decoded_object.to(device)
+            # skip = skip.to(device)
+            x_pred = modules["decoder"]([decoded_object, skip])
 
-                mse += nn.MSELoss()(x[i], x_pred)
-                kld += kl_criterion(mu,logvar,args)
+            mse += nn.MSELoss()(x[i], x_pred)
+            kld += kl_criterion(mu,logvar,args)
 
-            beta = kl_anneal.get_beta()
-            loss = mse + kld * beta
-    scaler.scale(loss).backward()
-    scaler.step(optimizer)
-    scaler.update()
+        beta = kl_anneal.get_beta()
+        loss = mse + kld * beta
+    # scaler.scale(loss).backward()
+    # scaler.step(optimizer)
+    # scaler.update()
     # loss.backward()
 
-    # optimizer.step()
+    optimizer.step()
 
     return loss.detach().cpu().numpy() / (args.n_past + args.n_future), mse.detach().cpu().numpy() / (args.n_past + args.n_future), kld.detach().cpu().numpy() / (args.n_future + args.n_past)
 
