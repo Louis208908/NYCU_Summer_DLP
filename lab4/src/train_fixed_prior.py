@@ -256,15 +256,16 @@ def main():
         torch.manual_seed(args.seed)
         torch.cuda.manual_seed_all(args.seed)
 
-        if os.path.exists('./{}/train_record.txt'.format(args.log_dir)):
-            os.remove('./{}/train_record.txt'.format(args.log_dir))
-        
-        # print(args)
+        if not args.debug:
+            if os.path.exists('./{}/train_record.txt'.format(args.log_dir)):
+                os.remove('./{}/train_record.txt'.format(args.log_dir))
+            
+            # print(args)
 
-        with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
-            train_record.write('args: {}\n'.format(args))
-        with open('./{}/run_command.txt'.format(args.log_dir), 'a') as train_record:
-            train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/train_fixed_prior.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch));
+            with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
+                train_record.write('args: {}\n'.format(args))
+            with open('./{}/run_command.txt'.format(args.log_dir), 'a') as train_record:
+                train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/train_fixed_prior.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch));
 
         # ------------ build the models  --------------
 
