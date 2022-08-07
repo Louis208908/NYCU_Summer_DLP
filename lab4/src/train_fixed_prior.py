@@ -83,12 +83,10 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     use_teacher_forcing = True if random.random() < args.tfr else False
     x = x.to(device)
     cond = cond.to(device)
-    for i in range(1, args.n_past + args.n_future):
-        # raise NotImplementedError
 
-        # with autocast():
+
+    with autocast():
         encoded_seq = [modules["encoder"](x[i]) for i in range(args.n_past + args.n_future)];
-
         for i in range(1, args.n_past + args.n_future):
             h_t , _ = encoded_seq[i];
 
@@ -103,10 +101,10 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
             latent_var, mu, logvar = modules["posterior"](h_t)
 
             lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)
-            # lstm_input = lstm_input.to(device)
+            lstm_input = lstm_input.to(device)
             
             decoded_object = modules["frame_predictor"](lstm_input)
-            # decoded_object = decoded_object.to(device)
+            decoded_object = decoded_object.to(device)
             # skip = skip.to(device)
             x_pred = modules["decoder"]([decoded_object, skip])
 
@@ -115,9 +113,9 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
 
         beta = kl_anneal.get_beta()
         loss = mse + kld * beta
-    # scaler.scale(loss).backward()
-    # scaler.step(optimizer)
-    # scaler.update()
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
     # loss.backward()
 
     optimizer.step()
