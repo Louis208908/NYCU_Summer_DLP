@@ -375,7 +375,7 @@ def main():
             decoder.eval()
             posterior.eval()
 
-            if epoch % 5 == 0:
+            if epoch % 2 == 0:
                 psnr_list = []
                 for _ in tqdm(range(len(validate_data) // args.batch_size)):
                     try:
@@ -408,7 +408,7 @@ def main():
                         'last_epoch': epoch},
                         '{}/model_{}.pth'.format(args.log_dir, ave_psnr))
 
-            if epoch % 20 == 0:
+            if epoch % 10 == 0:
                 try:
                     validate_seq, validate_cond = next(validate_iterator)
                 except StopIteration:
