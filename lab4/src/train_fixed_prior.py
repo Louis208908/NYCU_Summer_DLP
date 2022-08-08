@@ -105,7 +105,6 @@ def train_batch(x, cond, modules, optimizer, kl_anneal, args,device):
             
             decoded_object = modules["frame_predictor"](lstm_input)
             decoded_object = decoded_object.to(device)
-            # skip = skip.to(device)
             x_pred = modules["decoder"]([decoded_object, skip])
 
             mse += nn.MSELoss()(x[i], x_pred)
@@ -127,6 +126,7 @@ class kl_annealing():
             self.mode = "cyclical"
         else:
             self.mode = "monotonic"
+        self.args = args
         self.beta = args.beta
         self.kl_anneal_cyclical = args.kl_anneal_cyclical
         self.kl_anneal_ratio = args.kl_anneal_ratio
@@ -147,6 +147,8 @@ class kl_annealing():
         # raise NotImplementedError
     
     def get_beta(self):
+        if self.args.debug:
+            print("now beta: {}".format(self.beta));
         return self.beta;
         raise NotImplementedError
 
