@@ -57,12 +57,15 @@ def parse_args():
     parser.add_argument('--cuda', default=False, action='store_true')  
     parser.add_argument('--cuda_index', default=1, type = int, help='to identify which device to use')
     parser.add_argument('--debug', default=False, action='store_true')  
+    parser.add_argument('--debug_input_shape', default=False, action='store_true')  
+    parser.add_argument('--debug_tfr', default=False, action='store_true')  
+    parser.add_argument('--debug_beta', default=False, action='store_true')  
 
     args = parser.parse_args()
     return args
 
 def train_batch(x, cond, modules, optimizer, kl_anneal, args,device):
-    if args.debug:
+    if args.debug_input_shape:
         print("seq shape:")
         print(x.shape)
         print("cond shape:")
@@ -358,6 +361,7 @@ def main():
                 epoch_mse += mse
                 epoch_kld += kld
             
+            kl_anneal.update(epoch)
             if epoch >= args.tfr_start_decay_epoch:
                 ### Update teacher forcing ratio ###
                 # raise NotImplementedError
@@ -365,7 +369,7 @@ def main():
                 args.tfr -= args.tfr_decay_step;
                 if args.tfr <= args.tfr_lower_bound:
                     args.tfr = args.tfr_lower_bound
-                if args.debug:
+                if args.debug_tfr:
                     print("now tfr: {}".format(args.tfr));
             kl_betas.append(kl_anneal.get_beta())
             tfrs.append(args.tfr)
@@ -378,7 +382,8 @@ def main():
             encoder.eval()
             decoder.eval()
             posterior.eval()
-            print("beta = {}".format(kl_anneal.get_beta()))
+            if args.debug_beta:
+                print("beta = {}".format(kl_anneal.get_beta()))
             if epoch % 2 == 0:
                 with torch.no_grad():
                     psnr_list = []
