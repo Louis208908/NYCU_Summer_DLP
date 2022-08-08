@@ -317,6 +317,8 @@ def main():
             args.optimizer = optim.RMSprop
         elif args.optimizer == 'sgd':
             args.optimizer = optim.SGD
+        elif args.optimizer == 'adamW':
+            args.optimizer = optim.AdamW
         else:
             raise ValueError('Unknown optimizer: %s' % args.optimizer)
 
