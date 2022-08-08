@@ -61,7 +61,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def train(x, cond, modules, optimizer, kl_anneal, args,device):
+def train_batch(x, cond, modules, optimizer, kl_anneal, args,device):
     if args.debug:
         print("seq shape:")
         print(x.shape)
@@ -116,9 +116,6 @@ def train(x, cond, modules, optimizer, kl_anneal, args,device):
     scaler.scale(loss).backward()
     scaler.step(optimizer)
     scaler.update()
-    # loss.backward()
-
-    optimizer.step()
 
     return loss.detach().cpu().numpy() / (args.n_past + args.n_future), mse.detach().cpu().numpy() / (args.n_past + args.n_future), kld.detach().cpu().numpy() / (args.n_future + args.n_past)
 
@@ -357,7 +354,7 @@ def main():
 
                 seq  = seq.permute((1, 0, 2, 3, 4))[:args.n_past + args.n_future]
                 cond = cond.permute((1, 0, 2))[:args.n_past + args.n_future]
-                loss, mse, kld = train(seq, cond, modules, optimizer, kl_anneal, args,device)
+                loss, mse, kld = train_batch(seq, cond, modules, optimizer, kl_anneal, args,device)
                 epoch_loss += loss
                 epoch_mse += mse
                 epoch_kld += kld
@@ -369,6 +366,8 @@ def main():
                 args.tfr -= args.tfr_decay_step;
                 if args.tfr <= args.tfr_lower_bound:
                     args.tfr = args.tfr_lower_bound
+                if args.debug:
+                    print("now tfr: {}".format(args.tfr));
             kl_betas.append(kl_anneal.get_beta())
             tfrs.append(args.tfr)
 
