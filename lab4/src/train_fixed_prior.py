@@ -147,10 +147,7 @@ class kl_annealing():
         # raise NotImplementedError
     
     def get_beta(self):
-        if self.args.debug:
-            print("now beta: {}".format(self.beta));
         return self.beta;
-        raise NotImplementedError
 
 
 class DataLoader_pro(DataLoader):    
@@ -381,7 +378,7 @@ def main():
             encoder.eval()
             decoder.eval()
             posterior.eval()
-
+            print("beta = {}".format(kl_anneal.get_beta()))
             if epoch % 2 == 0:
                 with torch.no_grad():
                     psnr_list = []
