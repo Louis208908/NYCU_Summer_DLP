@@ -143,7 +143,7 @@ class kl_annealing():
     def update(self, epoch):
 
         if self.mode == 'monotonic':
-            self.beta =  (1.0 / (self.time)) * (epoch) if epoch < self.period else 1.
+            self.beta =  (1.0 / (self.period)) * (epoch) if epoch < self.period else 1.
         else:
             epoch %= self.period
             self.beta = (1.0 / (self.period / 2))*(epoch) if epoch < self.period / 2 else 1.
