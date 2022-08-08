@@ -135,7 +135,7 @@ def pred(x, cond, modules,args,device):
                     h_t, _ = modules["encoder"](x[frame_id])
                     _ , z_t, _ = modules["posterior"](h_t)
                 else:
-                    torch.cuda.FloatTensor(args.batch_size, args.z_dim).normal_()
+                    z_t = torch.cuda.FloatTensor(args.batch_size, args.z_dim).normal_()
                 
                 if frame_id < args.n_past:
                     modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_id - 1]], dim=1))
