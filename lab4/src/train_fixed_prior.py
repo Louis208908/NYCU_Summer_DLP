@@ -100,6 +100,7 @@ def train_batch(x, cond, modules, optimizer, kl_anneal, args,device):
                     h_previous,_ = encoded_seq[ i - 1 ]
                 else:
                     h_previous,_ = modules["encoder"](x_pred)
+            # h_previous = h_(t-1)
             
             latent_var, mu, logvar = modules["posterior"](h_t)
 

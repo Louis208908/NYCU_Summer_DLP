@@ -128,14 +128,18 @@ def pred(x, cond, modules,args,device):
             modules["posterior"].hidden = modules["posterior"].init_hidden()
             # 要這麼做是因為這是個lstm 我們要把過去資料清掉 不然就會記憶中就會有不該存在的資料
             x_input = x[0];
-            for frame_id in range(args.n_past + args.n_future):
-                # if args.last_frame_skip or frame_id < args.n_past:
-                h_in, _ = modules["encoder"](x_input)
+            prediction.append(x_input)
+            for frame_id in range(1,args.n_past + args.n_future):
+                if args.last_frame_skip or frame_id < args.n_past:
+                    h_in, skip = modules["encoder"](x_input)
+                else:
+                    h_in, _    = modules["encoder"](x_input)
+
                 if frame_id < args.n_past:
                     h_t, _ = modules["encoder"](x[frame_id])
                     _ , z_t, _ = modules["posterior"](h_t)
                 else:
-                    z_t = torch.cuda.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
+                    z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
                 
                 if frame_id < args.n_past:
                     modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_id - 1]], dim=1))
