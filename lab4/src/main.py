@@ -17,7 +17,7 @@ from prefetch_generator import BackgroundGenerator
 from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
-from util.utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred, plot_rec
+from util.utils import init_weights, kl_criterion, plot_prediction_and_gt, finn_eval_seq, pred, plot_reconstruction
 from trainer.trainer import build_trainer
 
 torch.backends.cudnn.benchmark = True

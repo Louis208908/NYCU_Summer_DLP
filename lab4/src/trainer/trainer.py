@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 ## Self-defined
-from util.utils import mse_metric, kl_criterion, plot_pred, plot_rec, finn_eval_seq, pred
+from util.utils import mse_metric, kl_criterion, plot_prediction_and_gt, plot_reconstruction, finn_eval_seq, pred
 
 
 def build_trainer(args, frame_predictor, posterior, encoder, decoder, device):
@@ -212,8 +212,8 @@ class trainer:
                 validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:self.args.n_past + self.args.n_future]
                 validate_cond = validate_cond.permute((1, 0, 2))[:self.args.n_past + self.args.n_future]
                 
-                plot_pred(validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
-                plot_rec( validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
+                plot_prediction_and_gt(validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
+                plot_reconstruction( validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
             progress.update(1)
 
     def train_batch(self,x, cond):

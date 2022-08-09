@@ -118,22 +118,29 @@ def init_weights(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
-def plot_prediction(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
-    """Plot predictions with z sampled from N(0, I)"""
+
+
+
+def plot_prediction_and_gt(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
+    """Plot predictions with z sampled from N(0, I) and from ground truth"""
     ## prediction ==> 從N(0,1) 採樣mu 跟 logvar 作為frame predictor input
 
     #raise NotImplementedError
     pred_seq = pred(validate_seq, validate_cond, modules, args, device)
     print("[Epoch {}] Saving predicted images & GIF...".format(epoch))
     os.makedirs("{}/gen/epoch-{}-pred".format(args.log_dir, epoch), exist_ok=True)
-    images, pred_frames, gt_frames = [], [], []
+    gt_images, images, pred_frames, gt_frames = [], [], [],[]
     sample_seq, gt_seq = pred_seq[:, sample_idx, :, :, :], validate_seq[:, sample_idx, :, :, :]
     for frame_idx in range(sample_seq.shape[0]):
         img_file = "{}/gen/epoch-{}-pred/{}.png".format(args.log_dir, epoch, frame_idx)
+        gt_img_file = "{}/gen/epoch-{}-pred/{}_gt.png".format(args.log_dir, epoch, frame_idx)
         save_image(sample_seq[frame_idx], img_file)
+        save_image(gt_seq[frame_idx], gt_img_file)
         images.append(imageio.imread(img_file))
+        gt_images.append(imageio.imread(gt_img_file))
         pred_frames.append(sample_seq[frame_idx])
         os.remove(img_file)
+        os.remove(gt_img_file)
 
         gt_frames.append(gt_seq[frame_idx])
 
@@ -142,6 +149,7 @@ def plot_prediction(validate_seq, validate_cond, modules, epoch, args, device, s
     save_image(pred_grid, "{}/gen/epoch-{}-pred/pred_grid.png".format(args.log_dir, epoch))
     save_image(gt_grid  , "{}/gen/epoch-{}-pred/gt_grid.png".format(args.log_dir, epoch))
     imageio.mimsave("{}/gen/epoch-{}-pred/animation.gif".format(args.log_dir, epoch), images)
+    imageio.mimsave("{}/gen/epoch-{}-pred/gt_animation.gif".format(args.log_dir, epoch), gt_images)
 
 def plot_reconstruction(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
 	"""Plot predictions with z sampled from encoder & gaussian_lstm"""
