@@ -13,7 +13,7 @@ from util.utils import mse_metric, kl_criterion, plot_pred, plot_rec, finn_eval_
 def build_trainer(args, frame_predictor, posterior, encoder, decoder, device):
 	print("\nBuilding trainer...")
 
-	trainer = trainer(
+	my_trainer = trainer(
 		args, 
 		frame_predictor, 
 		posterior, 
@@ -21,7 +21,7 @@ def build_trainer(args, frame_predictor, posterior, encoder, decoder, device):
 		decoder, 
 		device
 	)
-	return trainer
+	return my_trainer
 
 class kl_annealing():
 	def __init__(self, args):

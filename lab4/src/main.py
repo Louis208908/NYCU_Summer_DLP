@@ -197,16 +197,16 @@ def main():
                                 drop_last=True,
                                 pin_memory=True)
         validate_iterator = iter(validate_loader)
-        trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
+        my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
         if mode == "train":
-            trainer.train(
+            my_trainer.train(
                 start_epoch, niter, 
                 train_data, train_loader, train_iterator, 
                 validate_data, validate_loader, validate_iterator
             )
         elif mode == "test":
             assert args.model_dir != "", "model_dir should not be empty!"
-            trainer.test(testing_data, testing_loader, testing_iterator)
+            my_trainer.test(testing_data, testing_loader, testing_iterator)
 
 
 
