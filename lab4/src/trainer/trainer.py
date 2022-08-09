@@ -127,45 +127,82 @@ class trainer:
                 epoch_kld += kld
 
         
-        if not self.args.debug:
-            with open("{}/train_record.txt".format(self.args.log_dir), "a") as train_record:
-                train_record.write(
-                    ("[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f | tf ratio: %.5f | kld beta: %.5f\n" % \
-                        (
-                            epoch, 
-                            epoch_loss / self.args.epoch_size, 
-                            epoch_mse  / self.args.epoch_size, 
-                            epoch_kld  / self.args.epoch_size, 
-                            self.args.tfr, 
-                            self.kl_anneal.get_beta()
+            if not self.args.debug:
+                with open("{}/train_record.txt".format(self.args.log_dir), "a") as train_record:
+                    train_record.write(
+                        ("[epoch: %02d] loss: %.5f | mse loss: %.5f | kld loss: %.5f | tf ratio: %.5f | kld beta: %.5f\n" % \
+                            (
+                                epoch, 
+                                epoch_loss / self.args.epoch_size, 
+                                epoch_mse  / self.args.epoch_size, 
+                                epoch_kld  / self.args.epoch_size, 
+                                self.args.tfr, 
+                                self.kl_anneal.get_beta()
+                            )
                         )
                     )
-                )
 
-        ### Update teacher forcing ratio ###
-        if epoch >= self.args.tfr_start_decay_epoch:
-            self.args.tfr_decay_step = (1 - 0) / self.args.niter
-            self.args.tfr = self.args.tfr - self.args.tfr_decay_step
-            if self.args.tfr < self.args.tfr_lower_bound:
-                self.args.tfr = self.args.tfr + self.args.tfr_decay_step
+            ### Update teacher forcing ratio ###
+            if epoch >= self.args.tfr_start_decay_epoch:
+                self.args.tfr_decay_step = (1 - 0) / self.args.niter
+                self.args.tfr = self.args.tfr - self.args.tfr_decay_step
+                if self.args.tfr < self.args.tfr_lower_bound:
+                    self.args.tfr = self.args.tfr + self.args.tfr_decay_step
 
-        ## Record kl annealing weight & teacher forcing ratio
-        kl_betas.append(self.kl_anneal.get_beta())
-        tfrs.append(self.args.tfr)
+            ## Record kl annealing weight & teacher forcing ratio
+            kl_betas.append(self.kl_anneal.get_beta())
+            tfrs.append(self.args.tfr)
 
 
-        ################
-        ## Validation ##
-        ################
-        self.modules["frame_predictor"].eval()
-        self.modules["posterior"].eval()
-        self.modules["encoder"].eval()
-        self.modules["decoder"].eval()
+            ################
+            ## Validation ##
+            ################
+            self.modules["frame_predictor"].eval()
+            self.modules["posterior"].eval()
+            self.modules["encoder"].eval()
+            self.modules["decoder"].eval()
 
-        if epoch % 2 == 0:
-            print("\nRunning validation...")
-            psnr_list = []
-            for _ in tqdm(range(len(valid_data) // self.args.batch_size + 1)):
+            if epoch % 2 == 0:
+                print("\nRunning validation...")
+                psnr_list = []
+                for _ in tqdm(range(len(valid_data) // self.args.batch_size + 1)):
+                    try:
+                        validate_seq, validate_cond = next(valid_iterator)
+                    except StopIteration:
+                        valid_iterator = iter(valid_loader)
+                        validate_seq, validate_cond = next(valid_iterator)
+
+                    validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:self.args.n_past + self.args.n_future]
+                    validate_cond = validate_cond.permute((1, 0, 2))[:self.args.n_past + self.args.n_future]
+
+                    pred_seq = pred(validate_seq, validate_cond, self.modules, self.args, self.device)
+                    _, _, psnr = finn_eval_seq(validate_seq[self.args.n_past:], pred_seq[self.args.n_past:])
+                    psnr_list.append(psnr)
+                
+                ave_psnr = np.mean(np.concatenate(psnr_list))
+
+                if not self.args.debug:
+                    with open("{}/train_record.txt".format(self.args.log_dir), "a") as train_record:
+                        train_record.write(("====================== validate psnr = {:.5f} ========================\n".format(ave_psnr)))
+
+                if ave_psnr > best_val_psnr:
+                    print("[Epoch {}] Saving model with best validation psnr...".format(epoch))
+                    best_val_psnr = ave_psnr
+                    ## save the model
+                    torch.save(
+                        {
+                            "encoder": self.modules["encoder"],
+                            "decoder": self.modules["decoder"],
+                            "frame_predictor": self.modules["frame_predictor"],
+                            "posterior": self.modules["posterior"],
+                            "args": self.args,
+                            "last_epoch": epoch, 
+                            "best_val_psnr": best_val_psnr
+                        },
+                        "%s/model.pth" % self.args.log_dir
+                    )
+                    
+            if epoch % 10 == 0:
                 try:
                     validate_seq, validate_cond = next(valid_iterator)
                 except StopIteration:
@@ -174,47 +211,10 @@ class trainer:
 
                 validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:self.args.n_past + self.args.n_future]
                 validate_cond = validate_cond.permute((1, 0, 2))[:self.args.n_past + self.args.n_future]
-
-                pred_seq = pred(validate_seq, validate_cond, self.modules, self.args, self.device)
-                _, _, psnr = finn_eval_seq(validate_seq[self.args.n_past:], pred_seq[self.args.n_past:])
-                psnr_list.append(psnr)
-            
-            ave_psnr = np.mean(np.concatenate(psnr_list))
-
-            if not self.args.debug:
-                with open("{}/train_record.txt".format(self.args.log_dir), "a") as train_record:
-                    train_record.write(("====================== validate psnr = {:.5f} ========================\n".format(ave_psnr)))
-
-            if ave_psnr > best_val_psnr:
-                print("[Epoch {}] Saving model with best validation psnr...".format(epoch))
-                best_val_psnr = ave_psnr
-                ## save the model
-                torch.save(
-                    {
-                        "encoder": self.modules["encoder"],
-                        "decoder": self.modules["decoder"],
-                        "frame_predictor": self.modules["frame_predictor"],
-                        "posterior": self.modules["posterior"],
-                        "args": self.args,
-                        "last_epoch": epoch, 
-                        "best_val_psnr": best_val_psnr
-                    },
-                    "%s/model.pth" % self.args.log_dir
-                )
                 
-        if epoch % 10 == 0:
-            try:
-                validate_seq, validate_cond = next(valid_iterator)
-            except StopIteration:
-                valid_iterator = iter(valid_loader)
-                validate_seq, validate_cond = next(valid_iterator)
-
-            validate_seq  = validate_seq.permute((1, 0, 2, 3, 4))[:self.args.n_past + self.args.n_future]
-            validate_cond = validate_cond.permute((1, 0, 2))[:self.args.n_past + self.args.n_future]
-            
-            plot_pred(validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
-            plot_rec( validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
-        progress.update(1)
+                plot_pred(validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
+                plot_rec( validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
+            progress.update(1)
 
     def train_batch(self,x, cond):
         if self.args.debug_input_shape:

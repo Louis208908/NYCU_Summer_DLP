@@ -190,7 +190,8 @@ def main():
                                 pin_memory = True)
         train_iterator = iter(train_loader)
 
-        validate_data = bair_robot_pushing_dataset(args, 'validate')
+        # validate_data = bair_robot_pushing_dataset(args, 'validate')
+        validate_data = bair_robot_pushing_dataset(args, 'test')
         validate_loader = DataLoader_pro(validate_data,
                                 num_workers=args.num_workers,
                                 batch_size=args.batch_size,
