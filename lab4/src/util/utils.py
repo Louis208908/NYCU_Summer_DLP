@@ -117,8 +117,10 @@ def init_weights(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
-def plot_pred(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
+def plot_prediction(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
     """Plot predictions with z sampled from N(0, I)"""
+    ## prediction ==> 從N(0,1) 採樣mu 跟 logvar 作為frame predictor input
+
     #raise NotImplementedError
     pred_seq = pred(validate_seq, validate_cond, modules, args, device)
     print("[Epoch {}] Saving predicted images & GIF...".format(epoch))
@@ -140,8 +142,9 @@ def plot_pred(validate_seq, validate_cond, modules, epoch, args, device, sample_
     save_image(gt_grid  , "{}/gen/epoch-{}-pred/gt_grid.png".format(args.log_dir, epoch))
     imageio.mimsave("{}/gen/epoch-{}-pred/animation.gif".format(args.log_dir, epoch), images)
 
-def plot_rec(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
+def plot_reconstruction(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
 	"""Plot predictions with z sampled from encoder & gaussian_lstm"""
+    ## reconstruction ==> 從gaussian_lstm 那邊採樣mu 跟 logvar 作為frame predictor input
 	#raise NotImplementedError
 
 	## Transfer to device
