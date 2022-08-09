@@ -19,6 +19,7 @@ from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
 from util.utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred, plot_rec
 from trainer.trainer import build_trainer
+from trainer.trainer import trainer
 
 torch.backends.cudnn.benchmark = True
 
@@ -198,15 +199,12 @@ def main():
                                 pin_memory=True)
         validate_iterator = iter(validate_loader)
         my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
-        if mode == "train":
-            my_trainer.train(
-                start_epoch, niter, 
-                train_data, train_loader, train_iterator, 
-                validate_data, validate_loader, validate_iterator
-            )
-        elif mode == "test":
-            assert args.model_dir != "", "model_dir should not be empty!"
-            my_trainer.test(testing_data, testing_loader, testing_iterator)
+        my_trainer.train(
+            start_epoch, niter, 
+            train_data, train_loader, train_iterator, 
+            validate_data, validate_loader, validate_iterator
+        )
+            
 
 
 

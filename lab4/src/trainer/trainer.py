@@ -82,6 +82,7 @@ class trainer:
 			"encoder": encoder,
 			"decoder": decoder,
 		}
+
     def train(
 			self, start_epoch, niter, 
 			train_data, train_loader, train_iterator, 
@@ -93,7 +94,7 @@ class trainer:
         best_val_psnr = 0
         kl_betas, tfrs = [], []
 
-        for epoch in range(start_epoch, start_epoch + niter):
+        for epoch in tqdm(range(start_epoch, start_epoch + niter)):
             self.modules["frame_predictor"].train()
             self.modules["posterior"].train()
             self.modules["encoder"].train()
