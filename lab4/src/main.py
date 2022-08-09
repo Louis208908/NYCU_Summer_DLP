@@ -17,7 +17,7 @@ from prefetch_generator import BackgroundGenerator
 from dataset import bair_robot_pushing_dataset
 from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
-from lab4.src.util.utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred, plot_rec
+from util.utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred, plot_rec
 from trainer.trainer import build_trainer
 
 torch.backends.cudnn.benchmark = True
@@ -151,7 +151,7 @@ def main():
             with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
                 train_record.write('args: {}\n'.format(args))
             with open('./{}/run_command.txt'.format(args.log_dir), 'a') as train_record:
-                train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/train_fixed_prior.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch));
+                train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/main.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch));
 
         # ------------ build the models  --------------
 

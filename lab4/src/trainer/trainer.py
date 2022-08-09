@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 ## Self-defined
-from lab4.src.util.utils import mse_metric, kl_criterion, plot_pred, plot_rec, finn_eval_seq, pred
+from util.utils import mse_metric, kl_criterion, plot_pred, plot_rec, finn_eval_seq, pred
 
 
 def build_trainer(args, frame_predictor, posterior, encoder, decoder, device):
