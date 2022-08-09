@@ -94,7 +94,9 @@ def main():
     assert 0 <= args.tfr and args.tfr <= 1
     assert 0 <= args.tfr_start_decay_epoch 
     assert 0 <= args.tfr_decay_step and args.tfr_decay_step <= 1
+    my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
 
+    
     if mode == "test":
         # assert args.model_dir != '', "model_dir should not be empty!"
         args.log_dir = './lab4/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0001000'
@@ -199,7 +201,6 @@ def main():
                                 drop_last=True,
                                 pin_memory=True)
         validate_iterator = iter(validate_loader)
-        my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
         my_trainer.train(
             start_epoch, niter, 
             train_data, train_loader, train_iterator, 

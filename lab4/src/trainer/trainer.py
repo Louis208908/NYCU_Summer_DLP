@@ -199,7 +199,7 @@ class trainer:
                             "last_epoch": epoch, 
                             "best_val_psnr": best_val_psnr
                         },
-                        "%s/model.pth" % self.args.log_dir
+                        "{}/model_{}.pth".format(self.args.log_dir, ave_psnr)
                     )
                     
             if epoch % 10 == 0:
