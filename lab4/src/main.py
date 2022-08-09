@@ -94,9 +94,34 @@ def main():
     assert 0 <= args.tfr and args.tfr <= 1
     assert 0 <= args.tfr_start_decay_epoch 
     assert 0 <= args.tfr_decay_step and args.tfr_decay_step <= 1
+    # ------------ build the models  --------------
+
+    if args.model_dir != '':
+        frame_predictor = saved_model['frame_predictor']
+        posterior = saved_model['posterior']
+    else:
+        frame_predictor = lstm(args.g_dim+args.z_dim + args.cond_dim, args.g_dim, args.rnn_size, args.predictor_rnn_layers, args.batch_size, device)
+        posterior = gaussian_lstm(args.g_dim, args.z_dim, args.rnn_size, args.posterior_rnn_layers, args.batch_size, device)
+        frame_predictor.apply(init_weights)
+        posterior.apply(init_weights)
+            
+    if args.model_dir != '':
+        decoder = saved_model['decoder']
+        encoder = saved_model['encoder']
+    else:
+        encoder = vgg_encoder(args.g_dim)
+        decoder = vgg_decoder(args.g_dim)
+        encoder.apply(init_weights)
+        decoder.apply(init_weights)
+    
+    # --------- transfer to device ------------------------------------
+    frame_predictor.to(device)
+    posterior.to(device)
+    encoder.to(device)
+    decoder.to(device)
     my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
 
-    
+
     if mode == "test":
         # assert args.model_dir != '', "model_dir should not be empty!"
         args.log_dir = './lab4/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0001000'
@@ -155,32 +180,6 @@ def main():
                 train_record.write('args: {}\n'.format(args))
             with open('./{}/run_command.txt'.format(args.log_dir), 'a') as train_record:
                 train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/main.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch));
-
-        # ------------ build the models  --------------
-
-        if args.model_dir != '':
-            frame_predictor = saved_model['frame_predictor']
-            posterior = saved_model['posterior']
-        else:
-            frame_predictor = lstm(args.g_dim+args.z_dim + args.cond_dim, args.g_dim, args.rnn_size, args.predictor_rnn_layers, args.batch_size, device)
-            posterior = gaussian_lstm(args.g_dim, args.z_dim, args.rnn_size, args.posterior_rnn_layers, args.batch_size, device)
-            frame_predictor.apply(init_weights)
-            posterior.apply(init_weights)
-                
-        if args.model_dir != '':
-            decoder = saved_model['decoder']
-            encoder = saved_model['encoder']
-        else:
-            encoder = vgg_encoder(args.g_dim)
-            decoder = vgg_decoder(args.g_dim)
-            encoder.apply(init_weights)
-            decoder.apply(init_weights)
-        
-        # --------- transfer to device ------------------------------------
-        frame_predictor.to(device)
-        posterior.to(device)
-        encoder.to(device)
-        decoder.to(device)
 
         # --------- load a dataset ------------------------------------
         train_data = bair_robot_pushing_dataset(args, 'train')
