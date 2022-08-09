@@ -94,7 +94,7 @@ class trainer:
         best_val_psnr = 0
         kl_betas, tfrs = [], []
 
-        for epoch in tqdm(range(start_epoch, start_epoch + niter)):
+        for epoch in range(start_epoch, start_epoch + niter):
             self.modules["frame_predictor"].train()
             self.modules["posterior"].train()
             self.modules["encoder"].train()
@@ -126,7 +126,7 @@ class trainer:
                 epoch_mse += mse
                 epoch_kld += kld
 
-        progress.update(1)
+        
         if not self.args.debug:
             with open("{}/train_record.txt".format(self.args.log_dir), "a") as train_record:
                 train_record.write(
@@ -214,6 +214,7 @@ class trainer:
             
             plot_pred(validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
             plot_rec( validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
+        progress.update(1)
 
     def train_batch(self,x, cond):
         if self.args.debug_input_shape:
