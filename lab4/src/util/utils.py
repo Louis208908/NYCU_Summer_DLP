@@ -12,6 +12,8 @@ from torch.autograd import Variable
 from torchvision import transforms
 from torchvision.utils import save_image,make_grid
 import os
+import argparse
+
 
 
 def kl_criterion(mu, logvar, args):
@@ -238,98 +240,99 @@ def pred(validate_seq, validate_cond, modules, args, device):
     return prediction
 
 
-def plot_learning_data():
-	"""Plot losses, psnr, kl annealing beta & teacher forcing ratio"""
-	from mpl_axes_aligner import align
+def plot_learning_data(exp_mode):
+    """Plot losses, psnr, kl annealing beta & teacher forcing ratio"""
+    from mpl_axes_aligner import align
 
-	exp_names = ["monotonic", "cyclical"]
-	for exp_name in exp_names:
-		records = {
-			"epoch"     : [], 
-			"loss"      : [], 
-			"mse"       : [], 
-			"kld"       : [], 
-			"tfr"       : [], 
-			"beta"      : [], 
-			"epoch_psnr": [], 
-			"psnr"      : []
-		}
-		
-		with open("../logs/fp/{}/train_record.txt".format(exp_name)) as f_record:
-			for line in f_record.readlines():
-				line = line.strip().rstrip()
-				if line.startswith("[epoch:"):
-					epoch = int(line.split("]")[0].split(":")[-1].strip().rstrip()) + 1
-					loss  = float(line.split("|")[0].split(":")[-1].strip().rstrip())
-					mse   = float(line.split("|")[1].split(":")[-1].strip().rstrip())
-					kld   = float(line.split("|")[2].split(":")[-1].strip().rstrip())
-					tfr   = float(line.split("|")[3].split(":")[-1].strip().rstrip())
-					beta  = float(line.split("|")[4].split(":")[-1].strip().rstrip())
-		
-					records["epoch"].append(epoch)
-					records["loss"].append(loss)
-					records["mse"].append(mse)
-					records["kld"].append(kld)
-					records["tfr"].append(tfr)
-					records["beta"].append(beta)
-				elif "validate psnr" in line:
-					valid_psnr = float(line.replace("=", "").strip().rstrip().split(" ")[-1])
-		
-					records["epoch_psnr"].append(epoch)
-					records["psnr"].append(valid_psnr)
-		
-		## Plot
-		fig, main_ax = plt.subplots()
-		sub_ax1 = main_ax.twinx()
-		
-		cmap = plt.get_cmap("tab10")
-		
-		p1, = main_ax.plot(records["epoch"]     , records["kld"] , color=cmap(0), label="KLD Loss")
-		p3, = main_ax.plot(records["epoch"]     , records["loss"], color=cmap(2), label="Total Loss")
-		p2, = main_ax.plot(records["epoch"]     , records["mse"] , color=cmap(1), label="MSE Loss")
-		p4, = sub_ax1.plot(records["epoch"]     , records["tfr"] , color=cmap(4), linestyle=":", label="Teacher Forcing Ratio")
-		p5, = sub_ax1.plot(records["epoch"]     , records["beta"], color=cmap(5), linestyle=":", label="KL Anneal Beta")
-		
-		main_ax.set_xlabel("Epoch")
-		main_ax.set_ylabel("Loss")
-		sub_ax1.set_ylabel("Teacher Forcing Ratio / KL Annealing Beta")
-		
-		main_ax.set_ylim([0, 0.0265])
-		main_ax.set_yticks([0, 0.005, 0.01, 0.015, 0.02, 0.025])
-		align.yaxes(main_ax, 0.0, sub_ax1, 0.0, 0.05)
-		
-		main_ax.legend(handles=[p1, p2, p3, p4, p5], loc="center right")
-		
-		plt.title("{} KL Annealing".format(exp_name.capitalize()))
-		plt.tight_layout()
-		plt.savefig("../logs/fp/{}/loss_ratio_{}.png".format(exp_name, exp_name))
+    records = {
+        "epoch"     : [], 
+        "loss"      : [], 
+        "mse"       : [], 
+        "kld"       : [], 
+        "tfr"       : [], 
+        "beta"      : [], 
+        "epoch_psnr": [], 
+        "psnr"      : []
+    }
+
+    with open("./logs/fp/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0000000/train_record.txt") as f_record:
+        for line in f_record.readlines():
+            line = line.strip().rstrip()
+            if line.startswith("[epoch:"):
+                epoch = int(line.split("]")[0].split(":")[-1].strip().rstrip()) + 1
+                loss  = float(line.split("|")[0].split(":")[-1].strip().rstrip())
+                mse   = float(line.split("|")[1].split(":")[-1].strip().rstrip())
+                kld   = float(line.split("|")[2].split(":")[-1].strip().rstrip())
+                tfr   = float(line.split("|")[3].split(":")[-1].strip().rstrip())
+                beta  = float(line.split("|")[4].split(":")[-1].strip().rstrip())
+
+                records["epoch"].append(epoch)
+                records["loss"].append(loss)
+                records["mse"].append(mse)
+                records["kld"].append(kld)
+                records["tfr"].append(tfr)
+                records["beta"].append(beta)
+            elif "validate psnr" in line:
+                valid_psnr = float(line.replace("=", "").strip().rstrip().split(" ")[-1])
+
+                records["epoch_psnr"].append(epoch)
+                records["psnr"].append(valid_psnr)
+
+    ## Plot
+    fig, main_ax = plt.subplots()
+    sub_ax1 = main_ax.twinx()
+
+    cmap = plt.get_cmap("tab10")
+
+    p1, = main_ax.plot(records["epoch"]     , records["kld"] , color=cmap(0), label="KLD Loss")
+    p3, = main_ax.plot(records["epoch"]     , records["loss"], color=cmap(2), label="Total Loss")
+    p2, = main_ax.plot(records["epoch"]     , records["mse"] , color=cmap(1), label="MSE Loss")
+    p4, = sub_ax1.plot(records["epoch"]     , records["tfr"] , color=cmap(4), linestyle=":", label="Teacher Forcing Ratio")
+    p5, = sub_ax1.plot(records["epoch"]     , records["beta"], color=cmap(5), linestyle=":", label="KL Anneal Beta")
+
+    main_ax.set_xlabel("Epoch")
+    main_ax.set_ylabel("Loss")
+    sub_ax1.set_ylabel("Teacher Forcing Ratio / KL Annealing Beta")
+
+    main_ax.set_ylim([0, 0.0265])
+    main_ax.set_yticks([0, 0.005, 0.01, 0.015, 0.02, 0.025])
+    align.yaxes(main_ax, 0.0, sub_ax1, 0.0, 0.05)
+
+    main_ax.legend(handles=[p1, p2, p3, p4, p5], loc="center right")
+
+    plt.title("KL Annealing {}".format(exp_mode))
+    plt.tight_layout()
+    plt.savefig("./logs/fp/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0000000/loss_ratio_monotonic.png")
 
 def plot_psnr():
-	exp_names = ["monotonic", "cyclical"]
 
-	plt.figure()
-	for exp_name in exp_names:
-		records = {"epoch": [], "psnr": []}
-		with open("../logs/fp/{}/train_record.txt".format(exp_name)) as f_record:
-			for line in f_record.readlines():
-				line = line.strip().rstrip()
-				if line.startswith("[epoch:"):
-					epoch = int(line.split("]")[0].split(":")[-1].strip().rstrip()) + 1
-				if "validate psnr" in line:
-					valid_psnr = float(line.replace("=", "").strip().rstrip().split(" ")[-1])
+    plt.figure()
 
-					records["epoch"].append(epoch)
-					records["psnr" ].append(valid_psnr)
+    records = {"epoch": [], "psnr": []}
+    with open("./logs/fp/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0000000/train_record.txt") as f_record:
+        for line in f_record.readlines():
+            line = line.strip().rstrip()
+            if line.startswith("[epoch:"):
+                epoch = int(line.split("]")[0].split(":")[-1].strip().rstrip()) + 1
+            if "validate psnr" in line:
+                valid_psnr = float(line.replace("=", "").strip().rstrip().split(" ")[-1])
 
-		plt.plot(records["epoch"], records["psnr"], label=exp_name.capitalize())
+                records["epoch"].append(epoch)
+                records["psnr" ].append(valid_psnr)
 
-	plt.xlabel("Epoch")
-	plt.ylabel("PSNR")
+        plt.plot(records["epoch"], records["psnr"])
 
-	plt.legend()
-	plt.title("Learning Curves of PSNR")
-	plt.tight_layout()
-	plt.savefig("../logs/fp/psnr.png")
+    plt.xlabel("Epoch")
+    plt.ylabel("PSNR")
+
+    plt.title("Learning Curves of PSNR")
+    plt.tight_layout()
+    plt.savefig("./logs/fp/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0000000/psnr.png")
 if __name__ == "__main__":
     #plot_loss_ratio()
-    plot_psnr()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--exp_mode', default='monotonic')  
+    args = parser.parse_args()
+
+
+    plot_psnr(args.exp_mode)
