@@ -115,47 +115,9 @@ def init_weights(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
-
-def pred(x, cond, modules,args,device):
-    x  = x.to(device)
-    cond = cond.to(device)
-    autocast = torch.cuda.amp.autocast
-    with autocast():
-        with torch.no_grad():
-            prediction = list()
-            #record the prediction seq
-            modules["frame_predictor"].hidden = modules["frame_predictor"].init_hidden()
-            modules["posterior"].hidden = modules["posterior"].init_hidden()
-            # 要這麼做是因為這是個lstm 我們要把過去資料清掉 不然就會記憶中就會有不該存在的資料
-            x_input = x[0];
-            prediction.append(x_input)
-            for frame_id in range(1,args.n_past + args.n_future):
-                if args.last_frame_skip or frame_id < args.n_past:
-                    h_in, skip = modules["encoder"](x_input)
-                else:
-                    h_in, _    = modules["encoder"](x_input)
-
-                if frame_id < args.n_past:
-                    h_t, _ = modules["encoder"](x[frame_id])
-                    _ , z_t, _ = modules["posterior"](h_t)
-                else:
-                    z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
-                
-                if frame_id < args.n_past:
-                    modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_id - 1]], dim=1))
-                    x_input = x[frame_id]
-                else:
-                    decoded_obj = modules["frame_predictor"](torch.cat([h_in, z_t, cond[frame_id - 1]], dim=1))
-                    x_input = modules["decoder"]([decoded_obj, _])
-                
-                prediction.append(x_input)
-            
-            prediction = torch.stack(prediction)
-            return prediction
-
 def plot_pred(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
     """Plot predictions with z sampled from N(0, I)"""
-    # raise NotImplementedError
+    #raise NotImplementedError
     pred_seq = pred(validate_seq, validate_cond, modules, args, device)
     print("[Epoch {}] Saving predicted images & GIF...".format(epoch))
     os.makedirs("{}/gen/epoch-{}-pred".format(args.log_dir, epoch), exist_ok=True)
@@ -175,7 +137,6 @@ def plot_pred(validate_seq, validate_cond, modules, epoch, args, device, sample_
     save_image(pred_grid, "{}/gen/epoch-{}-pred/pred_grid.png".format(args.log_dir, epoch))
     save_image(gt_grid  , "{}/gen/epoch-{}-pred/gt_grid.png".format(args.log_dir, epoch))
     imageio.mimsave("{}/gen/epoch-{}-pred/animation.gif".format(args.log_dir, epoch), images)
-
 
 def plot_rec(validate_seq, validate_cond, modules, epoch, args, device, sample_idx=0):
 	"""Plot predictions with z sampled from encoder & gaussian_lstm"""
@@ -237,6 +198,44 @@ def plot_rec(validate_seq, validate_cond, modules, epoch, args, device, sample_i
 	save_image(grid, "{}/gen/epoch-{}-rec/rec_grid.png".format(args.log_dir, epoch))
 	imageio.mimsave("{}/gen/epoch-{}-rec/animation.gif".format(args.log_dir, epoch), images)
 
+def pred(validate_seq, validate_cond, modules, args, device):
+    """Predict on validation sequences"""
+	## Transfer to device
+    validate_seq  = validate_seq.to(device)
+    validate_cond = validate_cond.to(device)
+    with torch.no_grad():
+        modules["frame_predictor"].hidden = modules["frame_predictor"].init_hidden()
+        modules["posterior"].hidden = modules["posterior"].init_hidden()
+        # 要這麼做是因為這是個lstm 我們要把過去資料清掉 不然就會記憶中就會有不該存在的資料
+        x_input = validate_seq[0];
+        
+        prediction = []
+        prediction.append(x_input)
+        #record the prediction seq
+        for frame_id in range(1,args.n_past + args.n_future):
+            if args.last_frame_skip or frame_id < args.n_past:
+                h_in, skip = modules["encoder"](x_input)
+            else:
+                h_in, _    = modules["encoder"](x_input)
+
+            ## Obtain the latent vector z at step (t)
+            if frame_id < args.n_past:
+                h_t, _    = modules["encoder"](validate_seq[frame_id])
+                _, z_t, _ = modules["posterior"](h_t) ## Take the mean
+            else:
+                z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
+            
+            if frame_id < args.n_past:
+                modules["frame_predictor"](torch.cat([h_in, z_t, validate_cond[frame_id - 1]], dim=1))
+                x_input = validate_seq[frame_id]
+            else:
+                decoded_obj = modules["frame_predictor"](torch.cat([h_in, z_t, validate_cond[frame_id - 1]], dim=1))
+                x_input = modules["decoder"]([decoded_obj, skip])
+            
+            prediction.append(x_input)
+            
+    prediction = torch.stack(prediction)
+    return prediction
 
 
 def plot_learning_data():
@@ -331,3 +330,6 @@ def plot_psnr():
 	plt.title("Learning Curves of PSNR")
 	plt.tight_layout()
 	plt.savefig("../logs/fp/psnr.png")
+if __name__ == "__main__":
+    #plot_loss_ratio()
+    plot_psnr()
