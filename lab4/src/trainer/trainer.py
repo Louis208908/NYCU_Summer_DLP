@@ -62,18 +62,18 @@ class trainer:
         self.device = device
 
         if self.args.optimizer == "adam":
-            self.args.optimizer = optim.Adam
+            optimizer = optim.Adam
         elif self.args.optimizer == "rmsprop":
-            self.args.optimizer = optim.RMSprop
+            optimizer = optim.RMSprop
         elif self.args.optimizer == "sgd":
-            self.args.optimizer = optim.SGD
+            optimizer = optim.SGD
         elif self.args.optimizer == "adamW":
-            self.args.optimizer = optim.AdamW
+            optimizer = optim.AdamW
         else:
             raise ValueError("Unknown optimizer: %s" % self.args.optimizer)
 
         params = list(frame_predictor.parameters()) + list(posterior.parameters()) + list(encoder.parameters()) + list(decoder.parameters())
-        self.optimizer = self.args.optimizer(params, lr=self.args.lr, betas=(self.args.beta1, 0.999))
+        self.optimizer = optimizer(params, lr=self.args.lr, betas=(self.args.beta1, 0.999))
         self.kl_anneal = kl_annealing(self.args)
 
         self.modules = {
