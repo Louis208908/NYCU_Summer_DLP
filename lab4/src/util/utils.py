@@ -13,6 +13,7 @@ from torchvision import transforms
 from torchvision.utils import save_image,make_grid
 import os
 import argparse
+import tqdm
 
 
 
@@ -331,6 +332,145 @@ def plot_psnr():
     plt.title("Learning Curves of PSNR")
     plt.tight_layout()
     plt.savefig("./logs/fp/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0000000/psnr.png")
+
+
+def add_border(x, color, pad=1):
+    w = x.size()[1]
+    nc = x.size()[0]
+    px = Variable(torch.zeros(3, w + 2 * pad + 30, w + 2 * pad))
+    if color == 'red':
+        px[0] =0.7 
+    elif color == 'green':
+        px[1] = 0.7
+    if nc == 1:
+        for c in range(3):
+            px[c, pad:w+pad, pad:w+pad] = x
+    else:
+        px[:, pad:w+pad, pad:w+pad] = x
+    return px
+
+def make_gifs(modules,args , testing_seq, testing_cond, device):
+    ## Transfer to device
+    validate_seq  = validate_seq.to(device)
+    validate_cond = validate_cond.to(device)
+    with torch.no_grad():
+        posterior_gen = pred(testing_seq, testing_cond,modules,args,device)
+    
+        _, ssim, psnr = eval_seq(testing_seq, posterior_gen)
+
+
+    ###### ssim ######
+    gifs = [ [] for t in range(12) ]
+    text = [ [] for t in range(12) ]
+    mean_ssim = np.mean(ssim, 1)
+    ordered = np.argsort(mean_ssim)
+    rand_sidx = [np.random.randint(args.batch_size) for s in range(3)]
+    for t in range(args.n_eval):
+        # gt 
+        gifs[t].append(add_border(validate_seq[t][0], 'green'))
+        text[t].append('Ground\ntruth')
+        #posterior 
+        if t < args.n_past:
+            color = 'green'
+        else:
+            color = 'red'
+        gifs[t].append(add_border(posterior_gen[t][0], color))
+        text[t].append('Approx.\nposterior')
+        # best 
+        if t < args.n_past:
+            color = 'green'
+        else:
+            color = 'red'
+        sidx = ordered[-1]
+        gifs[t].append(add_border(posterior_gen[t][sidx], color))
+        text[t].append('Best SSIM')
+        # random 3
+        for s in range(len(rand_sidx)):
+            gifs[t].append(add_border(posterior_gen[t][rand_sidx[s]], color))
+            text[t].append('Random\nsample %d' % (s+1))
+
+    fname = '%s/visualize.gif' % (args.log_dir) 
+    save_gif_with_text(fname, gifs, text)
+
+def clear_progressbar():
+    # moves up 3 lines
+    print("\033[2A")
+    # deletes the whole line, regardless of character position
+    print("\033[2K")
+    # moves up two lines again
+    print("\033[2A")
+
+def save_gif_with_text(filename, inputs, text, duration=0.25):
+    images = []
+    for tensor, text in zip(inputs, text):
+        img = image_tensor([draw_text_tensor(ti, texti) for ti, texti in zip(tensor, text)], padding=0)
+        img = img.cpu()
+        img = img.transpose(0,1).transpose(1,2).clamp(0,1).numpy()
+        images.append(img)
+    imageio.mimsave(filename, images, duration=duration)
+
+def is_sequence(arg):
+    return (not hasattr(arg, "strip") and
+            not type(arg) is np.ndarray and
+            not hasattr(arg, "dot") and
+            (hasattr(arg, "__getitem__") or
+            hasattr(arg, "__iter__")))
+
+def image_tensor(inputs, padding=1):
+    # assert is_sequence(inputs)
+    assert len(inputs) > 0
+    # print(inputs)
+
+    # if this is a list of lists, unpack them all and grid them up
+    if is_sequence(inputs[0]) or (hasattr(inputs, "dim") and inputs.dim() > 4):
+        images = [image_tensor(x) for x in inputs]
+        if images[0].dim() == 3:
+            c_dim = images[0].size(0)
+            x_dim = images[0].size(1)
+            y_dim = images[0].size(2)
+        else:
+            c_dim = 1
+            x_dim = images[0].size(0)
+            y_dim = images[0].size(1)
+
+        result = torch.ones(c_dim,
+                            x_dim * len(images) + padding * (len(images)-1),
+                            y_dim)
+        for i, image in enumerate(images):
+            result[:, i * x_dim + i * padding :
+                   (i+1) * x_dim + i * padding, :].copy_(image)
+
+        return result
+
+    # if this is just a list, make a stacked image
+    else:
+        images = [x.data if isinstance(x, torch.autograd.Variable) else x for x in inputs]
+        # print(images)
+        if images[0].dim() == 3:
+            c_dim = images[0].size(0)
+            x_dim = images[0].size(1)
+            y_dim = images[0].size(2)
+        else:
+            c_dim = 1
+            x_dim = images[0].size(0)
+            y_dim = images[0].size(1)
+
+        result = torch.ones(c_dim,
+                            x_dim,
+                            y_dim * len(images) + padding * (len(images)-1))
+        for i, image in enumerate(images):
+            result[:, :, i * y_dim + i * padding :
+                   (i+1) * y_dim + i * padding].copy_(image)
+        return result
+
+def draw_text_tensor(tensor, text):
+    np_x = tensor.transpose(0, 1).transpose(1, 2).data.cpu().numpy()
+    pil = Image.fromarray(np.uint8(np_x*255))
+    draw = ImageDraw.Draw(pil)
+    draw.text((4, 64), text, (0,0,0))
+    img = np.asarray(pil)
+    return Variable(torch.Tensor(img / 255.)).transpose(1, 2).transpose(0, 1)
+
 if __name__ == "__main__":
     #plot_loss_ratio()
     parser = argparse.ArgumentParser()

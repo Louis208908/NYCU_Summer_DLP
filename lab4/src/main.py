@@ -146,8 +146,8 @@ def main():
 
     elif mode == "train":
         timestr = time.strftime("%Y%m%d-%H%M%S-")
-        name = '-lr=%.4f-beta=%.7f-optim=%7s-niter=%d-epoch_size=%d'\
-            % (args.lr,args.beta,args.optimizer,args.niter,args.epoch_size)
+        name = '-lr=%.4f-beta=%.7f-optim=%7s-niter=%d-epoch_size=%d-batch_size=%d'\
+            % (args.lr,args.beta,args.optimizer,args.niter,args.epoch_size,args.batch_size)
         timestr += name
         if args.kl_anneal_cyclical:
             timestr += "-cyclical"
@@ -178,7 +178,7 @@ def main():
             with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
                 train_record.write('args: {}\n'.format(args))
             with open('./{}/run_command.txt'.format(args.log_dir), 'a') as train_record:
-                train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/main.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch));
+                train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/main.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {} --batch_size {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch, args.batch_size));
 
         # --------- load a dataset ------------------------------------
         train_data = bair_robot_pushing_dataset(args, 'train')

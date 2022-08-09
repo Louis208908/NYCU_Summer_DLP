@@ -298,3 +298,6 @@ class trainer:
         plot_pred(test_seq, test_cond, self.modules, "best", self.args, self.device, sample_idx=sample_idx)
         plot_rec( test_seq, test_cond, self.modules, "best", self.args, self.device, sample_idx=sample_idx)
 
+
+    
+
