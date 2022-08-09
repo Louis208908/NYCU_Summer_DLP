@@ -265,9 +265,9 @@ class trainer:
 
             beta = self.kl_anneal.get_beta()
             loss = mse + kld * beta
-        scaler.scale(loss).backward()
-        scaler.step(self.optimizer)
-        scaler.update()
+            scaler.scale(loss).backward()
+            scaler.step(self.optimizer)
+            scaler.update()
 
         return loss.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), mse.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), kld.detach().cpu().numpy() / (self.args.n_future + self.args.n_past)
 

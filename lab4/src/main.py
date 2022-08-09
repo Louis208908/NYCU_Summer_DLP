@@ -19,7 +19,6 @@ from models.lstm import gaussian_lstm, lstm
 from models.vgg_64 import vgg_decoder, vgg_encoder
 from util.utils import init_weights, kl_criterion, plot_pred, finn_eval_seq, pred, plot_rec
 from trainer.trainer import build_trainer
-from trainer.trainer import trainer
 
 torch.backends.cudnn.benchmark = True
 
@@ -99,20 +98,18 @@ def main():
     if args.model_dir != '':
         frame_predictor = saved_model['frame_predictor']
         posterior = saved_model['posterior']
+        decoder = saved_model['decoder']
+        encoder = saved_model['encoder']
     else:
         frame_predictor = lstm(args.g_dim+args.z_dim + args.cond_dim, args.g_dim, args.rnn_size, args.predictor_rnn_layers, args.batch_size, device)
         posterior = gaussian_lstm(args.g_dim, args.z_dim, args.rnn_size, args.posterior_rnn_layers, args.batch_size, device)
         frame_predictor.apply(init_weights)
         posterior.apply(init_weights)
-            
-    if args.model_dir != '':
-        decoder = saved_model['decoder']
-        encoder = saved_model['encoder']
-    else:
         encoder = vgg_encoder(args.g_dim)
         decoder = vgg_decoder(args.g_dim)
         encoder.apply(init_weights)
         decoder.apply(init_weights)
+
     
     # --------- transfer to device ------------------------------------
     frame_predictor.to(device)
@@ -138,12 +135,14 @@ def main():
         posterior = saved_model["posterior"].to(device)
         decoder = saved_model["decoder"].to(device)
         encoder = saved_model["encoder"].to(device)
+        my_tester = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
         modules = {
             'frame_predictor': frame_predictor,
             'posterior': posterior,
             'encoder': encoder,
             'decoder': decoder,
         }
+        my_tester.test(testing_data,testing_loader,testing_iterator,"test")
 
     elif mode == "train":
         timestr = time.strftime("%Y%m%d-%H%M%S-")
