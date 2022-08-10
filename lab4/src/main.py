@@ -161,6 +161,9 @@ def main():
             timestr += "-cyclical"
         else:
             timestr += "-monotonic"
+        
+        if args.leanred_prior:
+            timestr += "-learned_prior"
 
 
         args.log_dir = '%s/%s' % (args.log_dir, timestr)
@@ -186,7 +189,7 @@ def main():
             with open('./{}/train_record.txt'.format(args.log_dir), 'a') as train_record:
                 train_record.write('args: {}\n'.format(args))
             with open('./{}/run_command.txt'.format(args.log_dir), 'a') as train_record:
-                train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/main.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {} --batch_size {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch, args.batch_size));
+                train_record.write('python -u ./NYCU_Summer_DLP/lab4/src/main.py --niter {} --epoch_size {} --cuda_index {} --tfr_start_decay_epoch {} --batch_size {} --learned_prior {}'.format(args.niter, args.epoch_size,args.cuda_index,args.tfr_start_decay_epoch, args.batch_size, args.learned_prior));
 
         # --------- load a dataset ------------------------------------
         train_data = bair_robot_pushing_dataset(args, 'train')
