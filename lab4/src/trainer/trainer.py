@@ -214,7 +214,7 @@ class trainer:
                 
                 plot_prediction_and_gt(validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
                 plot_reconstruction( validate_seq, validate_cond, self.modules, epoch, self.args, self.device)
-                make_gifs(self.modules,self.args,validate_seq,validate_cond,self.device);
+                # make_gifs(self.modules,self.args,validate_seq,validate_cond,self.device);
             progress.update(1)
 
     def train_batch(self,x, cond):

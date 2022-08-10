@@ -364,7 +364,7 @@ def make_gifs(modules,args , testing_seq, testing_cond, device):
     with torch.no_grad():
         posterior_gen = pred(testing_seq, testing_cond,modules,args,device)
     
-        _, ssim, psnr = eval_seq(testing_seq, posterior_gen)
+    _, ssim, psnr = eval_seq(testing_seq, posterior_gen)
 
 
     ###### ssim ######
