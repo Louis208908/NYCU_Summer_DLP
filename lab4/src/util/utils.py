@@ -226,6 +226,8 @@ def pred(validate_seq, validate_cond, modules, args, device):
     with torch.no_grad():
         modules["frame_predictor"].hidden = modules["frame_predictor"].init_hidden()
         modules["posterior"].hidden = modules["posterior"].init_hidden()
+        if args.learned_prior:
+            modules["prior"].hidden = modules["prior"].init_hidden()
         # 要這麼做是因為這是個lstm 我們要把過去資料清掉 不然就會記憶中就會有不該存在的資料
         x_input = validate_seq[0];
         
@@ -243,7 +245,10 @@ def pred(validate_seq, validate_cond, modules, args, device):
                 h_t, _    = modules["encoder"](validate_seq[frame_id])
                 _, z_t, _ = modules["posterior"](h_t) ## Take the mean
             else:
-                z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
+                if args.learned_prior:
+                    z_t, _, _ = modules["prior"](x_input)
+                else:
+                    z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
             
             if frame_id < args.n_past:
                 modules["frame_predictor"](torch.cat([h_in, z_t, validate_cond[frame_id - 1]], dim=1))
