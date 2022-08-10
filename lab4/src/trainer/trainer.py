@@ -58,7 +58,7 @@ class kl_annealing():
 		return self.beta
 
 class trainer:
-    def __init__(self,args,frame_predictor, posterior, encoder,decoder, device, prior):
+    def __init__(self, args, frame_predictor, posterior, encoder,decoder, device, prior):
         self.args = args
         self.device = device
 
@@ -162,7 +162,6 @@ class trainer:
             kl_betas.append(self.kl_anneal.get_beta())
             tfrs.append(self.args.tfr)
 
-
             ################
             ## Validation ##
             ################
@@ -176,7 +175,7 @@ class trainer:
             if epoch % 2 == 0:
                 print("\nRunning validation...")
                 psnr_list = []
-                for _ in tqdm(range(len(valid_data) // self.args.batch_size + 1)):
+                for _ in tqdm(range(len(valid_data) // self.args.batch_size)):
                     try:
                         validate_seq, validate_cond = next(valid_iterator)
                     except StopIteration:
@@ -269,12 +268,10 @@ class trainer:
         use_teacher_forcing = True if random.random() < self.args.tfr else False
         x = x.to(self.device)
         cond = cond.to(self.device)
-
-
         with autocast():
             encoded_seq = [self.modules["encoder"](x[i]) for i in range(self.args.n_past + self.args.n_future)];
             for i in range(1, self.args.n_past + self.args.n_future):
-                h_t , _ = encoded_seq[i];
+                h_t, _ = encoded_seq[i];
 
                 if self.args.last_frame_skip or i < self.args.n_past:
                     h_previous, skip = encoded_seq[ i - 1 ]
@@ -282,9 +279,7 @@ class trainer:
                     if use_teacher_forcing:
                         h_previous,_ = encoded_seq[ i - 1 ]
                     else:
-                        h_previous,_ = self.modules["encoder"](x_pred)
-                # h_previous = h_(t-1)
-                
+                        h_previous,_ = self.modules["encoder"](x_pred)                
                 latent_var, mu, logvar = self.modules["posterior"](h_t)
                 if self.args.learned_prior:
                     _, mu_lp, logvar_lp = self.modules["prior"](h_previous)
@@ -307,11 +302,10 @@ class trainer:
             scaler.update()
 
         return loss.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), \
-                mse.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), \
-                kld.detach().cpu().numpy() / (self.args.n_future + self.args.n_past)
+               mse.detach().cpu().numpy()  / (self.args.n_past + self.args.n_future), \
+               kld.detach().cpu().numpy()  / (self.args.n_past + self.args.n_future)
 
-
-    def test(self,test_data, test_loader, test_iterator, test_set="test"):
+    def test(self, test_data, test_loader, test_iterator, test_set="test"):
         """Test only"""
         print("Testing only, plotting results...")
         psnr_list = []
@@ -336,7 +330,4 @@ class trainer:
 
         plot_pred(test_seq, test_cond, self.modules, "best", self.args, self.device, sample_idx=sample_idx)
         plot_rec( test_seq, test_cond, self.modules, "best", self.args, self.device, sample_idx=sample_idx)
-
-
-    
 
