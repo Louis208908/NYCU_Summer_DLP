@@ -10,7 +10,7 @@ import torch.optim as optim
 from util.utils import mse_metric, kl_criterion, plot_prediction_and_gt, plot_reconstruction, finn_eval_seq, pred, make_gifs
 
 
-def build_trainer(args, frame_predictor, posterior, encoder, decoder, device):
+def build_trainer(args, frame_predictor, posterior, encoder, decoder, device, prior = 0):
 	print("\nBuilding trainer...")
 
 	my_trainer = trainer(
@@ -19,7 +19,8 @@ def build_trainer(args, frame_predictor, posterior, encoder, decoder, device):
 		posterior, 
 		encoder, 
 		decoder, 
-		device
+		device,
+        prior
 	)
 	return my_trainer
 
