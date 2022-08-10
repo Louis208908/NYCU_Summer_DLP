@@ -125,6 +125,8 @@ def main():
             prior = gaussian_lstm(args.g_dim,args.z_dim,args.rnn_size, args.prior_rnn_layers, args.batch_size, device)
             prior.apply(init_weights)
             prior = prior.to(device)
+        else:
+            prior = 0;
 
     
     # --------- transfer to device ------------------------------------
@@ -132,6 +134,7 @@ def main():
     posterior.to(device)
     encoder.to(device)
     decoder.to(device)
+
     my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device, prior)
 
 
