@@ -17,10 +17,16 @@ import tqdm
 
 
 
-def kl_criterion(mu, logvar, args):
-    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-    KLD /= args.batch_size  
-    return KLD
+def kl_criterion(mu, logvar, mu_lp, logvar_lp, args):
+    if args.learned_prior:
+        sigma1 = logvar.mul(0.5).exp()
+        sigma2 = logvar_lp.mul(0.5).exp()
+        KLD = torch.log(sigma2 / sigma1) + (torch.exp(logvar) + (mu - mu_lp)**2)/(2*torch.exp(logvar_lp)) - 1/2
+        return KLD.sum() / args.batch_size
+    else:
+        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        KLD /= args.batch_size  
+        return KLD
     
 def eval_seq(gt, pred):
     T = len(gt)

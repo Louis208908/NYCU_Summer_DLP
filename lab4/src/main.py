@@ -48,6 +48,7 @@ def parse_args():
     parser.add_argument('--n_eval', type=int, default=12, help='number of frames to predict at eval time')
     parser.add_argument('--rnn_size', type=int, default=256, help='dimensionality of hidden layer')
     parser.add_argument('--posterior_rnn_layers', type=int, default=1, help='number of layers')
+    parser.add_argument('--prior_rnn_layers', type=int, default=1, help='number of layers')
     parser.add_argument('--predictor_rnn_layers', type=int, default=2, help='number of layers')
     parser.add_argument('--z_dim', type=int, default=64, help='dimensionality of z_t')
     parser.add_argument('--g_dim', type=int, default=128, help='dimensionality of encoder output vector and decoder input vector')
@@ -61,6 +62,7 @@ def parse_args():
     parser.add_argument('--debug_input_shape', default=False, action='store_true')  
     parser.add_argument('--debug_tfr', default=False, action='store_true')  
     parser.add_argument('--debug_beta', default=False, action='store_true')  
+    parser.add_argument('--learned_prior', default=False, action='store_true')  
 
     args = parser.parse_args()
     return args
@@ -100,6 +102,8 @@ def main():
         posterior = saved_model['posterior']
         decoder = saved_model['decoder']
         encoder = saved_model['encoder']
+        if args.learned_prior:
+            prior = saved_model['prior']
     else:
         frame_predictor = lstm(args.g_dim+args.z_dim + args.cond_dim, args.g_dim, args.rnn_size, args.predictor_rnn_layers, args.batch_size, device)
         posterior = gaussian_lstm(args.g_dim, args.z_dim, args.rnn_size, args.posterior_rnn_layers, args.batch_size, device)
@@ -109,6 +113,10 @@ def main():
         decoder = vgg_decoder(args.g_dim)
         encoder.apply(init_weights)
         decoder.apply(init_weights)
+        if args.learned_prior:
+            prior = gaussian_lstm(args.g_dim,args.z_dim,args.rnn_size, args.prior_rnn_layers, args.batch_size, device)
+            prior.apply(init_weights)
+            prior = prior.to(device)
 
     
     # --------- transfer to device ------------------------------------
@@ -116,7 +124,7 @@ def main():
     posterior.to(device)
     encoder.to(device)
     decoder.to(device)
-    my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
+    my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device, prior)
 
 
     if mode == "test":
@@ -146,7 +154,7 @@ def main():
 
     elif mode == "train":
         timestr = time.strftime("%Y%m%d-%H%M%S-")
-        name = '-lr=%.4f-beta=%.7f-optim=%7s-niter=%d-epoch_size=%d-batch_size=%d'\
+        name = '-lr=%.4f-beta=%.7f-optim=%s-niter=%d-epoch_size=%d-batch_size=%d'\
             % (args.lr,args.beta,args.optimizer,args.niter,args.epoch_size,args.batch_size)
         timestr += name
         if args.kl_anneal_cyclical:

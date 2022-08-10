@@ -57,7 +57,7 @@ class kl_annealing():
 		return self.beta
 
 class trainer:
-    def __init__(self,args,frame_predictor, posterior, encoder,decoder, device):
+    def __init__(self,args,frame_predictor, posterior, encoder,decoder, device, prior):
         self.args = args
         self.device = device
 
@@ -73,6 +73,8 @@ class trainer:
             raise ValueError("Unknown optimizer: %s" % self.args.optimizer)
 
         params = list(frame_predictor.parameters()) + list(posterior.parameters()) + list(encoder.parameters()) + list(decoder.parameters())
+        if args.learned_prior:
+            params += list(prior.parameters())
         self.optimizer = optimizer(params, lr=self.args.lr, betas=(self.args.beta1, 0.999))
         self.kl_anneal = kl_annealing(self.args)
 
@@ -82,6 +84,8 @@ class trainer:
 			"encoder": encoder,
 			"decoder": decoder,
 		}
+        if args.learned_prior:
+            self.modules["prior"] = prior
 
     def train(
 			self, start_epoch, niter, 
@@ -99,6 +103,8 @@ class trainer:
             self.modules["posterior"].train()
             self.modules["encoder"].train()
             self.modules["decoder"].train()
+            if self.args.learned_prior:
+                self.modules["prior"].train()
 
             epoch_loss = 0
             epoch_mse = 0
@@ -106,6 +112,8 @@ class trainer:
 
             ## Update KL annealing weight
             self.kl_anneal.update(epoch)
+            if self.args.debug_beta:
+                print("now beta: {}".format(self.kl_anneal.get_beta()))
 
             for _ in tqdm(range(self.args.epoch_size), desc="[Epoch {}]".format(epoch)):
                 try:
@@ -161,6 +169,8 @@ class trainer:
             self.modules["posterior"].eval()
             self.modules["encoder"].eval()
             self.modules["decoder"].eval()
+            if self.args.learned_prior:
+                self.modules["prior"].eval()
 
             if epoch % 2 == 0:
                 print("\nRunning validation...")
@@ -188,19 +198,34 @@ class trainer:
                 if ave_psnr > best_val_psnr:
                     print("[Epoch {}] Saving model with best validation psnr...".format(epoch))
                     best_val_psnr = ave_psnr
-                    ## save the model
-                    torch.save(
-                        {
-                            "encoder": self.modules["encoder"],
-                            "decoder": self.modules["decoder"],
-                            "frame_predictor": self.modules["frame_predictor"],
-                            "posterior": self.modules["posterior"],
-                            "args": self.args,
-                            "last_epoch": epoch, 
-                            "best_val_psnr": best_val_psnr
-                        },
-                        "{}/model_{}.pth".format(self.args.log_dir, ave_psnr)
-                    )
+                    if(self.args.learned_prior):
+                        torch.save(
+                            {
+                                "encoder": self.modules["encoder"],
+                                "decoder": self.modules["decoder"],
+                                "frame_predictor": self.modules["frame_predictor"],
+                                "posterior": self.modules["posterior"],
+                                "prior": self.modules["prior"],
+                                "args": self.args,
+                                "last_epoch": epoch, 
+                                "best_val_psnr": best_val_psnr
+                            },
+                            "{}/model_{}_lp.pth".format(self.args.log_dir, ave_psnr)
+                        )
+                    else:
+                        ## save the model
+                        torch.save(
+                            {
+                                "encoder": self.modules["encoder"],
+                                "decoder": self.modules["decoder"],
+                                "frame_predictor": self.modules["frame_predictor"],
+                                "posterior": self.modules["posterior"],
+                                "args": self.args,
+                                "last_epoch": epoch, 
+                                "best_val_psnr": best_val_psnr
+                            },
+                            "{}/model_{}.pth".format(self.args.log_dir, ave_psnr)
+                        )
                     
             if epoch % 10 == 0:
                 try:
@@ -230,10 +255,14 @@ class trainer:
         self.modules['posterior'].zero_grad()
         self.modules['encoder'].zero_grad()
         self.modules['decoder'].zero_grad()
+        if self.args.learned_prior:
+            self.modules['prior'].zero_grad()
 
         # initialize the hidden state.
         self.modules['frame_predictor'].hidden = self.modules['frame_predictor'].init_hidden()
         self.modules['posterior'].hidden = self.modules['posterior'].init_hidden()
+        if self.args.learned_prior:
+            self.modules['prior'].hidden = self.modules['prior'].init_hidden()
         mse = 0
         kld = 0
         use_teacher_forcing = True if random.random() < self.args.tfr else False
@@ -256,13 +285,19 @@ class trainer:
                 # h_previous = h_(t-1)
                 
                 latent_var, mu, logvar = self.modules["posterior"](h_t)
+                if self.args.learned_prior:
+                    _, mu_lp, logvar_lp = self.modules["prior"](h_previous)
 
                 lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)                
                 decoded_object = self.modules["frame_predictor"](lstm_input)
                 x_pred = self.modules["decoder"]([decoded_object, skip])
 
                 mse += nn.MSELoss()(x[i], x_pred)
-                kld += kl_criterion(mu,logvar,self.args)
+                if(self.args.learned_prior):
+                    kld += kl_criterion(mu,logvar, mu_lp, logvar_lp ,self.args)
+                else:
+                    kld += kl_criterion(mu,logvar, 0, 0,self.args)
+                    
 
             beta = self.kl_anneal.get_beta()
             loss = mse + kld * beta
@@ -270,7 +305,9 @@ class trainer:
             scaler.step(self.optimizer)
             scaler.update()
 
-        return loss.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), mse.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), kld.detach().cpu().numpy() / (self.args.n_future + self.args.n_past)
+        return loss.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), \
+                mse.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), \
+                kld.detach().cpu().numpy() / (self.args.n_future + self.args.n_past)
 
 
     def test(self,test_data, test_loader, test_iterator, test_set="test"):
