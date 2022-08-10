@@ -359,8 +359,8 @@ def add_border(x, color, pad=1):
 
 def make_gifs(modules,args , testing_seq, testing_cond, device):
     ## Transfer to device
-    validate_seq  = validate_seq.to(device)
-    validate_cond = validate_cond.to(device)
+    testing_seq  = testing_seq.to(device)
+    testing_cond = testing_cond.to(device)
     with torch.no_grad():
         posterior_gen = pred(testing_seq, testing_cond,modules,args,device)
     
