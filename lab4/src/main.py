@@ -162,7 +162,7 @@ def main():
         else:
             timestr += "-monotonic"
         
-        if args.leanred_prior:
+        if args.learned_prior:
             timestr += "-learned_prior"
 
 
