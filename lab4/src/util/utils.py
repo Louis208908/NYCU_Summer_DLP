@@ -246,7 +246,7 @@ def pred(validate_seq, validate_cond, modules, args, device):
                 _, z_t, _ = modules["posterior"](h_t) ## Take the mean
             else:
                 if args.learned_prior:
-                    z_t, _, _ = modules["prior"](x_input)
+                    z_t, _, _ = modules["prior"](h_in)
                 else:
                     z_t = torch.FloatTensor(args.batch_size, args.z_dim).normal_().to(device)
             
