@@ -268,39 +268,39 @@ class trainer:
         use_teacher_forcing = True if random.random() < self.args.tfr else False
         x = x.to(self.device)
         cond = cond.to(self.device)
-        # with autocast():
-        encoded_seq = [self.modules["encoder"](x[i]) for i in range(self.args.n_past + self.args.n_future)];
-        for i in range(1, self.args.n_past + self.args.n_future):
-            h_t, _ = encoded_seq[i];
+        with autocast():
+            encoded_seq = [self.modules["encoder"](x[i]) for i in range(self.args.n_past + self.args.n_future)];
+            for i in range(1, self.args.n_past + self.args.n_future):
+                h_t, _ = encoded_seq[i];
 
-            if self.args.last_frame_skip or i < self.args.n_past:
-                h_previous, skip = encoded_seq[ i - 1 ]
-            else:
-                if use_teacher_forcing:
-                    h_previous,_ = encoded_seq[ i - 1 ]
+                if self.args.last_frame_skip or i < self.args.n_past:
+                    h_previous, skip = encoded_seq[ i - 1 ]
                 else:
-                    h_previous,_ = self.modules["encoder"](x_pred)                
-            latent_var, mu, logvar = self.modules["posterior"](h_t)
-            if self.args.learned_prior:
-                _, mu_lp, logvar_lp = self.modules["prior"](h_previous)
+                    if use_teacher_forcing:
+                        h_previous,_ = encoded_seq[ i - 1 ]
+                    else:
+                        h_previous,_ = self.modules["encoder"](x_pred)                
+                latent_var, mu, logvar = self.modules["posterior"](h_t)
+                if self.args.learned_prior:
+                    _, mu_lp, logvar_lp = self.modules["prior"](h_previous)
 
-            lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)                
-            decoded_object = self.modules["frame_predictor"](lstm_input)
-            x_pred = self.modules["decoder"]([decoded_object, skip])
+                lstm_input = torch.concat([h_previous,latent_var,cond[i - 1]], dim = 1)                
+                decoded_object = self.modules["frame_predictor"](lstm_input)
+                x_pred = self.modules["decoder"]([decoded_object, skip])
 
-            mse += nn.MSELoss()(x[i], x_pred)
-            if(self.args.learned_prior):
-                kld += kl_criterion(mu,logvar, mu_lp, logvar_lp ,self.args)
-            else:
-                kld += kl_criterion(mu,logvar, 0, 0,self.args)
-                
+                mse += nn.MSELoss()(x[i], x_pred)
+                if(self.args.learned_prior):
+                    kld += kl_criterion(mu,logvar, mu_lp, logvar_lp ,self.args)
+                else:
+                    kld += kl_criterion(mu,logvar, 0, 0,self.args)
+                    
 
-        beta = self.kl_anneal.get_beta()
-        loss = mse + kld * beta
-        self.optimizer.step()
-            # scaler.scale(loss).backward()
-            # scaler.step(self.optimizer)
-            # scaler.update()
+            beta = self.kl_anneal.get_beta()
+            loss = mse + kld * beta
+        # self.optimizer.step()
+            scaler.scale(loss).backward()
+            scaler.step(self.optimizer)
+            scaler.update()
 
         return loss.detach().cpu().numpy() / (self.args.n_past + self.args.n_future), \
                mse.detach().cpu().numpy()  / (self.args.n_past + self.args.n_future), \
