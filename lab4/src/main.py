@@ -136,6 +136,7 @@ def main():
     decoder.to(device)
 
     my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device, prior)
+    my_tester = build_trainer(args, frame_predictor, posterior, encoder, decoder, device, prior)
 
 
     if mode == "test":
@@ -150,22 +151,11 @@ def main():
                                 drop_last=True,
                                 pin_memory=True)
         testing_iterator = iter(testing_loader)
-        frame_predictor = saved_model["frame_predictor"].to(device)
-        posterior = saved_model["posterior"].to(device)
-        decoder = saved_model["decoder"].to(device)
-        encoder = saved_model["encoder"].to(device)
-        my_tester = build_trainer(args, frame_predictor, posterior, encoder, decoder, device)
-        modules = {
-            'frame_predictor': frame_predictor,
-            'posterior': posterior,
-            'encoder': encoder,
-            'decoder': decoder,
-        }
         my_tester.test(testing_data,testing_loader,testing_iterator,"test")
 
     elif mode == "train":
         timestr = time.strftime("%Y%m%d-%H%M%S-")
-        name = '-lr=%.4f-beta=%.7f-optim=%s-niter=%d-epoch_size=%d-batch_size=%d'\
+        name = '-lr=%.6f-beta=%.7f-optim=%s-niter=%d-epoch_size=%d-batch_size=%d'\
             % (args.lr,args.beta,args.optimizer,args.niter,args.epoch_size,args.batch_size)
         timestr += name
         if args.kl_anneal_cyclical:
