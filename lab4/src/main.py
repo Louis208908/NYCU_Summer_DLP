@@ -136,6 +136,10 @@ def main():
     posterior.to(device)
     encoder.to(device)
     decoder.to(device)
+    if args.learned_prior:
+        prior.to(device)
+    else:
+        prior = 0
 
     my_trainer = build_trainer(args, frame_predictor, posterior, encoder, decoder, device, prior)
     my_tester = build_trainer(args, frame_predictor, posterior, encoder, decoder, device, prior)
