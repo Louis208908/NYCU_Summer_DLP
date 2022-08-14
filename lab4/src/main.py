@@ -106,6 +106,8 @@ def main():
     # ------------ build the models  --------------
 
     if args.model_dir != '':
+        args.log_dir = './lab4/20220812-062012--lr=0.0020-beta=0.0000000-optim=adam-niter=100-epoch_size=336-batch_size=64-monotonic'
+        saved_model = torch.load("%s/model_26.109360472479175.pth" % args.log_dir)
         frame_predictor = saved_model['frame_predictor']
         posterior = saved_model['posterior']
         decoder = saved_model['decoder']
@@ -141,8 +143,6 @@ def main():
 
     if mode == "test":
         # assert args.model_dir != '', "model_dir should not be empty!"
-        args.log_dir = './lab4/20220812-062012--lr=0.0020-beta=0.0000000-optim=adam-niter=100-epoch_size=336-batch_size=64-monotonic'
-        saved_model = torch.load("%s/model_26.109360472479175.pth" % args.log_dir)
         testing_data = bair_robot_pushing_dataset(args, 'test')
         testing_loader = DataLoader_pro(testing_data,
                                 num_workers=args.num_workers,
