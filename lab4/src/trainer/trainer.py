@@ -329,6 +329,6 @@ class trainer:
 
         sample_idx = np.random.randint(0, self.args.batch_size)
 
-        plot_pred(test_seq, test_cond, self.modules, "best", self.args, self.device, sample_idx=sample_idx)
-        plot_rec( test_seq, test_cond, self.modules, "best", self.args, self.device, sample_idx=sample_idx)
+        plot_prediction_and_gt(test_seq, test_cond, self.modules, "best", self.args, self.device, sample_idx=sample_idx)
+        plot_reconstruction( test_seq, test_cond, self.modules, "best", self.args, self.device, sample_idx=sample_idx)
 
