@@ -63,7 +63,7 @@ def parse_args():
 
     ## Paths
     parser.add_argument("--log_dir"  , default="./lab4", help="base directory to save logs")
-    parser.add_argument("--model_dir", default=""          , help="base directory to save logs")
+    parser.add_argument("--model_dir", default="./lab4/20220812-062012--lr=0.0020-beta=0.0000000-optim=adam-niter=100-epoch_size=336-batch_size=64-monotonic"          , help="base directory to save logs")
     parser.add_argument("--data_root", default="./lab4", help="root directory for data")
     parser.add_argument('--cuda_index', default=1, type = int, help='to identify which device to use')
     parser.add_argument('--debug', default=False, action='store_true')  
@@ -141,8 +141,8 @@ def main():
 
     if mode == "test":
         # assert args.model_dir != '', "model_dir should not be empty!"
-        args.log_dir = './lab4/rnn_size=256-predictor-posterior-rnn_layers=2-1-n_past=2-n_future=10-lr=0.0020-g_dim=128-z_dim=64-last_frame_skip=False-beta=0.0001000'
-        saved_model = torch.load("%s/model.pth" % args.log_dir)
+        args.log_dir = './lab4/20220812-062012--lr=0.0020-beta=0.0000000-optim=adam-niter=100-epoch_size=336-batch_size=64-monotonic'
+        saved_model = torch.load("%s/model_26.109360472479175.pth" % args.log_dir)
         testing_data = bair_robot_pushing_dataset(args, 'test')
         testing_loader = DataLoader_pro(testing_data,
                                 num_workers=args.num_workers,
