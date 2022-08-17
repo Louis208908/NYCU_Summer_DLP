@@ -17,27 +17,27 @@ class Generator(nn.Module):
 		)
 		self.main = nn.Sequential(
 			## Input: latent vector z -> convolution
-			nn.ConvTranspose2d(self.args.z_dim + self.args.c_dim, self.args.input_dim * 8, 4, 1, 0, bias=False),
+			nn.ConvTranspose2d(self.args.z_dim + self.args.c_dim, self.args.input_dim * 8, 4, 1, 0, bias=True),
 			nn.BatchNorm2d(self.args.input_dim * 8),
 			nn.ReLU(True),
 
 			## State size: (self.args.input_dim * 8) x 4 x 4
-			nn.ConvTranspose2d(self.args.input_dim * 8, self.args.input_dim * 4, 4, 2, 1, bias=False),
+			nn.ConvTranspose2d(self.args.input_dim * 8, self.args.input_dim * 4, 4, 2, 1, bias=True),
 			nn.BatchNorm2d(self.args.input_dim * 4),
 			nn.ReLU(True),
 			
 			## State size: (self.args.input_dim * 4) x 8 x 8
-			nn.ConvTranspose2d(self.args.input_dim * 4, self.args.input_dim * 2, 4, 2, 1, bias=False),
+			nn.ConvTranspose2d(self.args.input_dim * 4, self.args.input_dim * 2, 4, 2, 1, bias=True),
 			nn.BatchNorm2d(self.args.input_dim * 2),
 			nn.ReLU(True),
 			
 			## State size: (self.args.input_dim * 2) x 16 x 16
-			nn.ConvTranspose2d(self.args.input_dim * 2, self.args.input_dim, 4, 2, 1, bias=False),
+			nn.ConvTranspose2d(self.args.input_dim * 2, self.args.input_dim, 4, 2, 1, bias=True),
 			nn.BatchNorm2d(self.args.input_dim),
 			nn.ReLU(True),
 			
 			## State size: (self.args.input_dim) x 32 x 32
-			nn.ConvTranspose2d(self.args.input_dim, self.args.n_channel, 4, 2, 1, bias=False),
+			nn.ConvTranspose2d(self.args.input_dim, self.args.n_channel, 4, 2, 1, bias=True),
 			nn.Tanh()
 			## State size: (self.args.n_channel) x 64 x 64
 		)
@@ -62,21 +62,21 @@ class Discriminator(nn.Module):
 		## Layers
 		self.shared_layers = nn.Sequential(
 			## Input size: (self.args.n_channel) x 64 x 64
-			nn.Conv2d(self.args.n_channel, self.args.input_dim, 4, 2, 1, bias=False),
+			nn.Conv2d(self.args.n_channel, self.args.input_dim, 4, 2, 1, bias=True),
 			nn.LeakyReLU(0.2, inplace=True),
 
 			## State size: (self.args.input_dim) x 32 x 32
-			nn.Conv2d(self.args.input_dim, self.args.input_dim * 2, 4, 2, 1, bias=False),
+			nn.Conv2d(self.args.input_dim, self.args.input_dim * 2, 4, 2, 1, bias=True),
 			nn.BatchNorm2d(self.args.input_dim * 2),
 			nn.LeakyReLU(0.2, inplace=True),
 			
 			## State size: (self.args.input_dim * 2) x 16 x 16
-			nn.Conv2d(self.args.input_dim * 2, self.args.input_dim * 4, 4, 2, 1, bias=False),
+			nn.Conv2d(self.args.input_dim * 2, self.args.input_dim * 4, 4, 2, 1, bias=True),
 			nn.BatchNorm2d(self.args.input_dim * 4),
 			nn.LeakyReLU(0.2, inplace=True),
 			
 			## State size: (self.args.input_dim * 4) x 8 x 8
-			nn.Conv2d(self.args.input_dim * 4, self.args.input_dim * 8, 4, 2, 1, bias=False),
+			nn.Conv2d(self.args.input_dim * 4, self.args.input_dim * 8, 4, 2, 1, bias=True),
 			nn.BatchNorm2d(self.args.input_dim * 8),
 			nn.LeakyReLU(0.2, inplace=True)
 		)
@@ -96,7 +96,7 @@ class ClassifierD(nn.Module):
 		self.device = device
 
 		## State size: (self.args.input_dim * 8) x 4 x 4
-		self.conv_block = nn.Conv2d(self.args.input_dim * 8, 1, 4, 1, 0, bias=False)
+		self.conv_block = nn.Conv2d(self.args.input_dim * 8, 1, 4, 1, 0, bias=True)
 		self.classifier = nn.Sigmoid()
 
 		self.to(self.device)
