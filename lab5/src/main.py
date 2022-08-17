@@ -11,6 +11,7 @@ from trainer.trainer import build_trainer
 
 import time
 import tqdm
+import torch.nn as nn
 
 
 def parse_args():
@@ -19,7 +20,7 @@ def parse_args():
 	## What to do
 	parser.add_argument("--train", action="store_true")
 	parser.add_argument("--test" , action="store_true")
-	parser.add_argument("--gan_type", default="infogan", choices=["infogan", "cgan", "wgan", "wgan-large", "acwgan"])
+	parser.add_argument("--gan_type", default="acgan", choices=["dcgan", "acgan"])
 
 	## Hyper-parameters
 	parser.add_argument("--seed", default=1, type=int, help="manual seed")
@@ -33,18 +34,18 @@ def parse_args():
 	parser.add_argument("--num_workers", type=int, default=0)
 	parser.add_argument("--n_eval", type=int, default=1, help="number of iterations (fixed noise) to evaluate the model")
 
-	## cgan
-	parser.add_argument("--input_dim", default=64, type=int, help="dimension of input image")
-	parser.add_argument("--z_dim", default=100, type=int, help="dimension of latent vector z")
-	parser.add_argument("--c_dim", default=300, type=int, help="dimension of condition vector")
-	parser.add_argument("--n_channel", default=3, type=int, help="number of channels of input image")
+	## Parameters of model
+	parser.add_argument("--img_size", default=64, type=int, help="size of each image dimension")
+	parser.add_argument("--num_classes", default=24, type=int, help="number of classes")
+	parser.add_argument("--latent_dim", default=100, type=int, help="size of the latent z vector")
+	parser.add_argument("--discriminator_dim", default=64, type=int, help="number of discriminators")
+	parser.add_argument("--generator_dim", default=300, type=int, help="number of generators")
+	parser.add_argument("--condition_dim", default=100, type=int, help="number of conditions")
+	parser.add_argument("--aux_weight", default=1, type=int, help="number of conditions")
+	parser.add_argument('--dis_iters', type=int, default=1, help='the iters of update discriminator')
 
-	## wgan
-	parser.add_argument("--n_critic", default=5, type=int, help="number of iterations of the critic per generator iteration")
-	parser.add_argument("--lambda_gp", default=10, type=int, help="factor of gradient penalty term")
-
-	## infogan
-	parser.add_argument("--lambda_Q", default=1, type=float, help="factor for auxiliary loss Q")
+	
+	
 
 	## Others
 	parser.add_argument("--report_freq", default=50, type=int, help="unit: steps (iterations), frequency to print loss values on terminal.")
@@ -67,6 +68,7 @@ def main(args):
 
 	## Set device
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 	#創建一個timestr，獲取當前時間，然後加上一個-，讓時間可以被分割
 	timestr = time.strftime("%Y%m%d-%H%M%S")

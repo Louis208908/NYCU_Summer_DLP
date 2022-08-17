@@ -1,6 +1,6 @@
 import os
 from tqdm import tqdm
-
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,6 +9,7 @@ from torchvision.utils import make_grid, save_image
 
 ## Self-defined
 from trainer.evaluator import evaluation_model
+from models.ACGAN import ACGAN
 
 def build_trainer(args, device, models):
 	print("\nBuilding trainer...")
@@ -20,43 +21,8 @@ class Trainer:
 		self.args = args
 		self.device = device
 
-		if self.args.gan_type == "infogan":
-			self.netG = models[0]
-			self.netD = models[1]
-			self.netQ = models[2]
-			self.shared = models[3]
+		self.models = models
 
-			self.netG = nn.DataParallel(self.netG)
-			self.netD = nn.DataParallel(self.netD)
-			self.netQ = nn.DataParallel(self.netQ)
-			self.shared = nn.DataParallel(self.shared)
-
-
-			## Optimizer
-			param_optimG = list(self.netG.parameters())
-			param_optimD = list(self.shared.parameters()) + list(self.netD.parameters())
-			param_optimQ = list(self.netQ.parameters())
-			self.optimG = optim.Adam(param_optimG, lr=self.args.lr_G, betas=(self.args.beta1, self.args.beta2))
-			self.optimD = optim.Adam(param_optimD, lr=self.args.lr_D, betas=(self.args.beta1, self.args.beta2))
-			self.optimQ = optim.Adam(param_optimQ, lr=self.args.lr_D, betas=(self.args.beta1, self.args.beta2))
-			self.optimG = nn.DataParallel(self.optimG)
-			self.optimD = nn.DataParallel(self.optimD)
-			self.optimQ = nn.DataParallel(self.optimQ)
-
-		elif self.args.gan_type == "cgan" or self.args.gan_type == "wgan" or self.args.gan_type == "wgan-large":
-			self.netG = models[0]
-			self.netD = models[1]
-
-			self.netG = nn.DataParallel(self.netG)
-			self.netD = nn.DataParallel(self.netD)
-
-			## Optimizer
-			self.optimG = optim.Adam(self.netG.parameters(), lr=self.args.lr_G, betas=(self.args.beta1, self.args.beta2))
-			self.optimD = optim.Adam(self.netD.parameters(), lr=self.args.lr_D, betas=(self.args.beta1, self.args.beta2))
-			self.optimG = nn.DataParallel(self.optimG)
-			self.optimD = nn.DataParallel(self.optimD)
-
-		
 		## Create classification model for evaluation
 		self.evaluator = evaluation_model(self.args)
 		self.evaluator = nn.DataParallel(self.evaluator)
@@ -64,15 +30,16 @@ class Trainer:
 		## Initialize log writer
 		self.log_file = "{}/log.txt".format(args.log_dir)
 		self.log_writer = open(self.log_file, "w")
+		self.dis_criterion = nn.BCELoss().to(device)
+		self.aux_criterion = nn.BCELoss().to(device)
 
 	def train(self, train_loader, test_loader):
 		"""Select different training procedures"""
-		if self.args.gan_type == "infogan":
-			self.train_infogan(train_loader, test_loader)
-		elif self.args.gan_type == "cgan":
-			self.train_cgan(train_loader, test_loader)
-		elif self.args.gan_type == "wgan" or self.args.gan_type == "wgan-large":
-			self.train_wgan(train_loader, test_loader)
+		if self.args.gan_type == "acgan":
+			self.train_acgan(train_loader, test_loader)
+		elif self.args.gan_type == "dcgan":
+			self.train_dcgan(train_loader, test_loader)
+
 
 	def compute_gradient_penalty(self, real, fake, cond):
 		"""Calculates the gradient penalty loss for WGAN GP"""
@@ -97,101 +64,93 @@ class Trainer:
 		
 		return gradient_penalty
 
-	def train_wgan(self, train_loader, test_loader):
-		"""Training loops for wgan"""
+	def train_acgan(self, train_loader, test_loader):
+		"""Training loops for acgan"""
 
 		G_losses, D_losses = [], []
 		best_acc = 0
+		iters = 0
 
-		test_cond = next(iter(test_loader)).to(self.device)
-		#fixed_noise = torch.randn(test_cond.shape[0], self.args.z_dim, 1, 1, device=self.device)
-		fixed_noise = [torch.randn(test_cond.shape[0], self.args.z_dim, 1, 1, device=self.device) for eval_ in range(self.args.n_eval)]
-		fixed_noise = torch.stack(fixed_noise)
-		torch.save(fixed_noise, "{}/fixed_noise_{}.pt".format(self.args.log_dir,self.args.checkpoint_epoch))
 
 		print("Start training {}...".format(self.args.gan_type))
-		for epoch in range(self.args.epochs):
+		for epoch in tqdm(range(self.args.epochs)):
+			for real_image, cond in tqdm(train_loader, desc="[Epoch {:3d}]".format(epoch)):
 
-			for step, (img_real, cond) in enumerate(tqdm(train_loader, desc="[Epoch {:3d}]".format(epoch))):
-				img_real = img_real.to(self.device)
+				self.models.networks.optimD.zero_grad()
+				real_image = real_image.to(self.device)
 				cond = cond.to(self.device)
 
-				batch_len = img_real.shape[0]
+				batch_size = real_image.shape[0]
+
+				# Use soft and noisy labels [0.7, 1.0]. Salimans et. al. 2016
+				real_label = ((1.0 - 0.7) * torch.rand(batch_size) + 0.7).to(self.device)
+				aux_label = cond
+
+				noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 				
-				##########################
-				## Update discriminator ##
-				##########################
-				loss_D_reported = 0
-				for iter_critic in range(self.args.n_critic):
-					self.netD.zero_grad()
-					## Generate a batch of fake images
-					noise = torch.randn(batch_len, self.args.z_dim, 1, 1, device=self.device)
-					img_fake = self.netG(noise, cond)
+				fake_img = self.models.generator(noise, aux_label)
+				fake_label = ((0.3 - 0.0) * torch.rand(batch_size) + 0.0).to(self.device)
 
-					preds_real = self.netD(img_real, cond)
-					preds_fake = self.netD(img_fake, cond)
+				# occasionally flip the labels when training the discriminator
+				if random.random() < 0.1:
+					real_label, fake_label = fake_label, real_label
 
-					## Gradient Penalty!!! ##
-					gp = self.compute_gradient_penalty(img_real, img_fake, cond)
-					## Want to maximize EM-distance
-					loss_D = -(torch.mean(preds_real) - torch.mean(preds_fake)) + self.args.lambda_gp * gp
-					loss_D.backward(retain_graph=True)
-					self.optimD.module.step()
+				dis_output, aux_output = self.models.discriminator(real_image)
+				dis_errD_real = self.dis_criterion(dis_output, real_label)
+				aux_errD_real = self.aux_criterion(aux_output, aux_label)
+				errD_real = dis_errD_real + self.args.aux_weight * aux_errD_real
+				errD_real.backward()
 
-					## Update statistics
-					loss_D_reported = loss_D_reported + loss_D
+				D_x = dis_output.mean().item()
+				accuracy = self.evaluator.module.compute_accuracy(aux_output, aux_label)
 
-				######################
-				## Update generator ##
-				######################
-				self.netG.zero_grad()
-				### Generate a batch of fake images
-				img_fake = self.netG(noise, cond)
-				preds_fake = self.netD(img_fake, cond)
+				dis_output, aux_output = self.models.discriminator(fake_img.detach())
 
-				loss_G = -torch.mean(preds_fake)
-				loss_G.backward()
-				self.optimG.module.step()
+				dis_errD_fake = self.dis_criterion(dis_output, fake_label)
+				aux_errD_fake = self.aux_criterion(aux_output, aux_label)
+				errD_fake = dis_errD_fake + self.args.aux_weight * aux_errD_fake
+				errD_fake.backward()
+				D_G_z1 = dis_output.mean().item()
 
-				if step % self.args.report_freq == 0:
-					#print("[Epoch {:3d}] Loss D: {:.4f}, Loss G: {:.4f}".format(epoch, loss_D.item(), loss_G.item()))
-					print("[Epoch {:3d}]\tLoss D: {:.4f}\tLoss G: {:.4f}".format(epoch, loss_D_reported.item() / self.args.n_critic, loss_G.item()))
-					self.log_writer.write("[Epoch {:3d}]\tLoss D: {:.4f}\tLoss G: {:.4f}\n".format(epoch, loss_D_reported.item() / self.args.n_critic, loss_G.item()))
+				errD = errD_real + errD_fake
 
-					## Evaluate classification results
-					eval_accs, best_eval_acc, best_pred_img = [], 0, None
-					for eval_iter in range(self.args.n_eval):
-						self.netG.eval()
-						self.netD.eval()
-						with torch.no_grad():
-							pred_img = self.netG(fixed_noise[eval_iter], test_cond)
-						eval_acc = self.evaluator.module.evaluate(pred_img, test_cond)
-						eval_accs.append(eval_acc)
+				self.models.networks.optimD.module.step()
 
-						if eval_acc > best_eval_acc:
-							best_eval_acc = eval_acc
-							best_pred_img = pred_img
-					avg_acc = sum(eval_accs) / len(eval_accs)
-					print("[Epoch {:3d}]\tAccuracy: {:.4f}".format(epoch, avg_acc))
-					self.log_writer.write("[Epoch {:3d}]\tAccuracy: {:.4f}\n".format(epoch, avg_acc))
-					
-					## Save generated images
-					
-					## Save model checkpoint
-					if avg_acc > best_acc:
-						best_acc = avg_acc
-						save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
-						print("[Epoch {:3d}]\tSaving model checkpoints with best accuracy...".format(epoch))
-						os.makedirs("{}/{}".format(self.args.log_dir, avg_acc))
-						torch.save(self.netG.state_dict(), "{}/Generator_{}.pth".format(self.args.log_dir, self.args.gan_type))
-						torch.save(self.netD.state_dict(), "{}/Discriminator_{}.pth".format(self.args.log_dir, self.args.gan_type))
+				print("updating generator")
+				for _ in tqdm(range(self.args.dis_iter)):
+					self.models.networks.optimG.zero_grad()
+					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
+					fake_img = self.models.generator(noise, aux_label)
+					dis_output, aux_output = self.models.discriminator(fake_img)
+					dis_errG = self.dis_criterion(dis_output, real_label)
+					aux_errG = self.aux_criterion(aux_output, aux_label)
+					errG = dis_errG + self.args.aux_weight * aux_errG
+					errG.backward()
+					self.models.networks.optimG.module.step()
 
-				G_losses.append(loss_G.item())
-				D_losses.append(loss_D.item())
+				total_loss_d += errD.item()
+				total_loss_g += errG.item()
+				total_acc += accuracy
+				
 
-		self.log_writer.close()
+				self.models.generator.eval()
+				self.models.discriminator.eval()
+				with torch.no_grad():
+					for cond in tqdm(test_loader):
+						cond = cond.to(self.device)
+						batch_size = cond.shape[0]
+						noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
+						fake_img = self.models.generator(noise, cond)
+						acc = self.evaluator.module.evaluate(fake_img, cond)
+						if acc > best_acc:
+							print("get a better accuracy: {}".format(acc))
+							best_acc = acc
+							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
+							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 
-	def train_cgan(self, train_loader, test_loader):
+		# self.log_writer.close()
+
+	def train_dcgan(self, train_loader, test_loader):
 		"""Training loops for cgan"""
 		G_losses, D_losses = [], []
 		best_acc = 0
@@ -277,106 +236,6 @@ class Trainer:
 				G_losses.append(loss_G.item())
 				D_losses.append(loss_D.item())
 
-	def train_infogan(self, train_loader, test_loader):
-		"""Training loops for infogan"""
-		G_losses, D_losses, Q_losses = [], [], []
-		best_acc = 0
-
-		test_cond = next(iter(test_loader)).to(self.device)
-		fixed_noise = torch.randn(test_cond.shape[0], self.args.z_dim, 1, 1, device=self.device)
-
-		print("Start training {}...".format(self.args.gan_type))
-		for epoch in range(self.args.epochs):
-
-			for img, cond in tqdm(train_loader):
-				img  = img.to(self.device)
-				cond = cond.to(self.device)
-
-				batch_len = img.shape[0]
-
-				real_label = torch.ones( batch_len, device=self.device)
-				fake_label = torch.zeros(batch_len, device=self.device)
-				
-				##########################
-				## Update discriminator ##
-				##########################
-				## Train all-real batch
-				self.netD.zero_grad()
-				self.shared.zero_grad()
-				preds = self.netD(self.shared(img))
-				loss_D_real = nn.BCELoss()(preds.flatten(), real_label)
-				loss_D_real.backward()
-
-				## Generate fake & train all-fake batch
-				noise = torch.randn(batch_len, self.args.z_dim, 1, 1, device=self.device)
-				fake  = self.netG(noise, cond)
-				preds = self.netD(self.shared(fake.detach()))
-				loss_D_fake = nn.BCELoss()(preds.flatten(), fake_label)
-				loss_D_fake.backward()
-				loss_D = loss_D_real + loss_D_fake
-
-				## Update discriminator
-				self.optimD.module.step()
-
-				##########################
-				## Update Generator & Q ##
-				##########################
-				self.netG.zero_grad()
-				self.netQ.zero_grad()
-				s_fake = self.shared(fake)
-				preds  = self.netD(s_fake)
-				q_fake = self.netQ(s_fake)
-
-				s_real = self.shared(img)
-				q_real = self.netQ(s_real)
-
-				#loss_G_rec = criterion(preds.flatten(), real_label)
-				#loss_G_aux = criterion(q_out, cond)
-				#loss_G = loss_G_rec + self.args.lambda_Q * loss_G_aux
-				#loss_G.backward()
-				loss_G = nn.BCELoss()(preds.flatten(), real_label)
-				
-				loss_Q_fake = nn.BCELoss()(q_fake, cond)
-				loss_Q_real = nn.BCELoss()(q_real, cond)
-				loss_Q = loss_Q_fake + loss_Q_real
-				
-				loss_G_Q = loss_G + loss_Q
-				loss_G_Q.backward()
-
-				## Update generator & Q
-				self.optimG.module.step()
-				self.optimQ.module.step()
-
-				# if step % self.args.report_freq == 0:
-				# 	print("[Epoch {:3d}] Loss D: {:.4f}, Loss G: {:.4f}, Loss Q: {:.4f}".format(epoch, loss_D.item(), loss_G.item(), loss_Q.item()))
-				G_losses.append(loss_G.item())
-				D_losses.append(loss_D.item())
-				Q_losses.append(loss_Q.item())
-
-			## Evaluate classification results
-			self.netG.eval()
-			self.netD.eval()
-			self.netQ.eval()
-			self.shared.eval()
-			with torch.no_grad():
-				pred_img = self.netG(fixed_noise, test_cond)
-			acc = self.evaluator.module.evaluate(pred_img, test_cond)
-			print("[Epoch {:3d}] Accuracy: {:.4f}".format(epoch, acc))
-			
-			## Save generated images
-			# if (epoch % self.args.save_img_freq == 0) or (self.args.epochs - 1 == epoch):
-				# save_image(pred_img, "{}/{}/pred_{}.png".format(self.args.result_dir, self.args.exp_name, epoch), normalize=True)
-			
-			## Save model checkpoint
-			if acc > best_acc:
-				best_acc = acc
-				save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
-				print("[Epoch {:3d}] Saving model checkpoints with best accuracy...".format(epoch))
-				os.makedirs("{}/{}".format(self.args.log_dir, acc))
-				torch.save(self.netG.state_dict(), "{}/{}/Generator.pth".format(self.args.log_dir, acc))
-				torch.save(self.netD.state_dict(), "{}/{}/ClassifierD.pth".format(self.args.log_dir, acc))
-				torch.save(self.netQ.state_dict(), "{}/{}/ClassifierQ.pth".format(self.args.log_dir, acc))
-				torch.save(self.shared.state_dict(), "{}/{}/Discriminator.pth".format(self.args.log_dir, acc))
 
 	def test(self, test_loader):
 		"""Test only"""
