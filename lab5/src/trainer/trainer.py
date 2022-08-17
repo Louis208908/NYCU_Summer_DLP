@@ -314,7 +314,7 @@ class Trainer:
 				loss_D = loss_D_real + loss_D_fake
 
 				## Update discriminator
-				self.optimD.step()
+				self.optimD.module.step()
 
 				##########################
 				## Update Generator & Q ##
