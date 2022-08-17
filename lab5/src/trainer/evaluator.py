@@ -60,7 +60,7 @@ class evaluation_model():
                     acc += 1
         return acc / total
         
-    def eval(self, images, labels):
+    def evaluate(self, images, labels):
         with torch.no_grad():
             ## your image shape should be (batch, 3, 64, 64)
             out = self.resnet18(images)
