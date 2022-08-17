@@ -35,7 +35,7 @@ class evaluation_model():
     def __init__(self, args):
         ## Modify the path to your own path
         self.args = args
-        checkpoint = torch.load("{}/evaluator.pth".format(self.args.model_dir))
+        checkpoint = torch.load("./lab5_log/evaluator.pth")
         self.resnet18 = models.resnet18(pretrained=False)
         self.resnet18.fc = nn.Sequential(
             nn.Linear(512,24),
