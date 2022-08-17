@@ -230,8 +230,8 @@ class Trainer:
 						save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
 						print("[Epoch {:3d}] Saving model checkpoints with best accuracy...".format(epoch))
 						os.makedirs("{}/{}".format(self.args.log_dir, avg_acc))
-						torch.save(self.netG.state_dict(), "{}/Generator_{}.pth".format(self.args.log_dir, self.args.gan_type))
-						torch.save(self.netD.state_dict(), "{}/Discriminator_{}.pth".format(self.args.log_dir, self.args.gan_type))
+						torch.save(self.netG.state_dict(), "{}/{}/Generator_{}.pth".format(self.args.log_dir,avg_acc, self.args.gan_type))
+						torch.save(self.netD.state_dict(), "{}/{}/Discriminator_{}.pth".format(self.args.log_dir,avg_acc, self.args.gan_type))
 
 				G_losses.append(loss_G.item())
 				D_losses.append(loss_D.item())
