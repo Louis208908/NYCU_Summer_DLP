@@ -176,7 +176,7 @@ class Trainer:
 					self.log_writer.write("[Epoch {:3d}]\tAccuracy: {:.4f}\n".format(epoch, avg_acc))
 					
 					## Save generated images
-					save_image(pred_img, "{}/{}/pred_{}-{}.png".format(self.args.result_dir, self.args.exp_name, epoch, step), normalize=True)
+					save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
 					
 					## Save model checkpoint
 					if avg_acc > best_acc:
@@ -263,7 +263,7 @@ class Trainer:
 					print("[Epoch {:3d}]\tAccuracy: {:.4f}".format(epoch, avg_acc))
 					
 					## Save generated images
-					save_image(pred_img, "{}/{}/pred_{}-{}.png".format(self.args.result_dir, self.args.exp_name, epoch, step), normalize=True)
+					save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
 					
 					## Save model checkpoint
 					if avg_acc > best_acc:
@@ -363,7 +363,8 @@ class Trainer:
 			
 			## Save generated images
 			if (epoch % self.args.save_img_freq == 0) or (self.args.epochs - 1 == epoch):
-				save_image(pred_img, "{}/{}/pred_{}.png".format(self.args.result_dir, self.args.exp_name, epoch), normalize=True)
+				save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
+				# save_image(pred_img, "{}/{}/pred_{}.png".format(self.args.result_dir, self.args.exp_name, epoch), normalize=True)
 			
 			## Save model checkpoint
 			if acc > best_acc:
