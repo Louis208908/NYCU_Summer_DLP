@@ -176,11 +176,11 @@ class Trainer:
 					self.log_writer.write("[Epoch {:3d}]\tAccuracy: {:.4f}\n".format(epoch, avg_acc))
 					
 					## Save generated images
-					save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
 					
 					## Save model checkpoint
 					if avg_acc > best_acc:
 						best_acc = avg_acc
+						save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
 						print("[Epoch {:3d}]\tSaving model checkpoints with best accuracy...".format(epoch))
 						os.makedirs("{}/{}".format(self.args.log_dir, avg_acc))
 						torch.save(self.netG.state_dict(), "{}/Generator_{}.pth".format(self.args.log_dir, self.args.gan_type))
@@ -264,11 +264,11 @@ class Trainer:
 					print("[Epoch {:3d}]\tAccuracy: {:.4f}".format(epoch, avg_acc))
 					
 					## Save generated images
-					save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
 					
 					## Save model checkpoint
 					if avg_acc > best_acc:
 						best_acc = avg_acc
+						save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
 						print("[Epoch {:3d}] Saving model checkpoints with best accuracy...".format(epoch))
 						os.makedirs("{}/{}".format(self.args.log_dir, avg_acc))
 						torch.save(self.netG.state_dict(), "{}/Generator_{}.pth".format(self.args.log_dir, self.args.gan_type))
@@ -288,7 +288,7 @@ class Trainer:
 		print("Start training {}...".format(self.args.gan_type))
 		for epoch in range(self.args.epochs):
 
-			for step, (img, cond) in enumerate(tqdm(train_loader, desc="[Epoch {:3d}]".format(epoch))):
+			for step, (img, cond) in enumerate(train_loader):
 				img  = img.to(self.device)
 				cond = cond.to(self.device)
 
@@ -364,13 +364,13 @@ class Trainer:
 			print("[Epoch {:3d}] Accuracy: {:.4f}".format(epoch, acc))
 			
 			## Save generated images
-			if (epoch % self.args.save_img_freq == 0) or (self.args.epochs - 1 == epoch):
-				save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
+			# if (epoch % self.args.save_img_freq == 0) or (self.args.epochs - 1 == epoch):
 				# save_image(pred_img, "{}/{}/pred_{}.png".format(self.args.result_dir, self.args.exp_name, epoch), normalize=True)
 			
 			## Save model checkpoint
 			if acc > best_acc:
 				best_acc = acc
+				save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
 				print("[Epoch {:3d}] Saving model checkpoints with best accuracy...".format(epoch))
 				os.makedirs("{}/{}".format(self.args.log_dir, acc))
 				torch.save(self.netG.state_dict(), "{}/{}/Generator.pth".format(self.args.log_dir, acc))
