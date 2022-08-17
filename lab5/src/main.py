@@ -69,12 +69,12 @@ def main(args):
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 	#創建一個timestr，獲取當前時間，然後加上一個-，讓時間可以被分割
-	timestr = time.strftime("%Y%m%d-%H%M%S-")
-	args.log_dir = "{}/{}-{}".format(args.log_dir, timestr, args.gan_type)
+	timestr = time.strftime("%Y%m%d-%H%M%S")
+	args.log_dir = "{}/{}_{}/".format(args.log_dir, timestr, args.gan_type)
 
 	## Set paths
 	if args.train:
-		os.makedirs("{}/{}".format(args.log_dir, args.exp_name), exist_ok=True)
+		os.makedirs("{}".format(args.log_dir), exist_ok=True)
 	elif args.test:
 		if not os.path.isdir("{}/{}".format(args.model_dir, args.exp_name)):
 			raise ValueError("Model checkpoints directory does not exist!")
