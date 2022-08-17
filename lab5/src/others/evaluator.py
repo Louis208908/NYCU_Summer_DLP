@@ -5,7 +5,7 @@ import torchvision.models as models
 '''===============================================================
 1. Title:     
 
-DLP summer 2022 Lab5 classifier
+DLP spring 2022 Lab7 classifier
 
 2. Purpose:
 
@@ -32,9 +32,10 @@ e.g. [[1,1,0,...,0],[0,1,1,0,...],...]
 
 
 class evaluation_model():
-    def __init__(self):
-        #modify the path to your own path
-        checkpoint = torch.load('logs/classifier/checkpoint.pth')
+    def __init__(self, args):
+        ## Modify the path to your own path
+        self.args = args
+        checkpoint = torch.load("{}/evaluator.pth".format(self.args.model_dir))
         self.resnet18 = models.resnet18(pretrained=False)
         self.resnet18.fc = nn.Sequential(
             nn.Linear(512,24),
@@ -44,6 +45,7 @@ class evaluation_model():
         self.resnet18 = self.resnet18.cuda()
         self.resnet18.eval()
         self.classnum = 24
+
     def compute_acc(self, out, onehot_labels):
         batch_size = out.size(0)
         acc = 0
@@ -57,9 +59,10 @@ class evaluation_model():
                 if j in li:
                     acc += 1
         return acc / total
+        
     def eval(self, images, labels):
         with torch.no_grad():
-            #your image shape should be (batch, 3, 64, 64)
+            ## your image shape should be (batch, 3, 64, 64)
             out = self.resnet18(images)
             acc = self.compute_acc(out.cpu(), labels.cpu())
             return acc
