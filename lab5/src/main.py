@@ -1,14 +1,17 @@
 import os
-import ipdb
 import random
 import shutil
 import argparse
 import torch
 
 ## Self-defined
-from data.loader import load_train_data, load_test_data
+from data.loader import get_dataloader
 from models.build_models import build_models
-from pipelines.trainer import build_trainer
+from trainer.trainer import build_trainer
+
+import time
+import tqdm
+
 
 def parse_args():
 	parser = argparse.ArgumentParser()
@@ -49,11 +52,8 @@ def parse_args():
 	parser.add_argument("--checkpoint_epoch", default=None, type=str, help="the epoch of checkpoint you want to load")
 
 	## Paths
-	parser.add_argument("--model_dir", default="/mnt/hdd1/projects/DLP2022/Lab7/checkpoints", help="base directory to save your model checkpoints")
-	parser.add_argument("--data_root", default="/mnt/hdd1/projects/DLP2022/Lab7/dataset", help="root directory for data")
-	parser.add_argument("--result_dir", default="/mnt/hdd1/projects/DLP2022/Lab7/result", help="base directory to save predicted images")
-	parser.add_argument("--log_dir", default="/mnt/hdd1/projects/DLP2022/Lab7/log", help="base directory to save training logs")
-	parser.add_argument("--exp_name", default="GAN")
+	parser.add_argument("--data_root", default="./lab5", help="root directory for data")
+	parser.add_argument("--log_dir", default="./lab5", help="base directory to save training logs")
 	parser.add_argument("--test_file", default="test.json")
 
 	args = parser.parse_args()
@@ -68,16 +68,12 @@ def main(args):
 	## Set device
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+	#創建一個timestr，獲取當前時間，然後加上一個-，讓時間可以被分割
+	timestr = time.strftime("%Y%m%d-%H%M%S-")
+	args.log_dir = "{}/{}-{}".format(args.log_dir, timestr, args.gan_type)
+
 	## Set paths
 	if args.train:
-		if os.path.isdir("{}/{}".format(args.model_dir, args.exp_name)):
-			shutil.rmtree("{}/{}".format(args.model_dir, args.exp_name))
-		if os.path.isdir("{}/{}".format(args.result_dir, args.exp_name)):
-			shutil.rmtree("{}/{}".format(args.result_dir, args.exp_name))
-		if os.path.isdir("{}/{}".format(args.log_dir, args.exp_name)):
-			shutil.rmtree("{}/{}".format(args.log_dir, args.exp_name))
-		os.makedirs("{}/{}".format(args.model_dir, args.exp_name), exist_ok=True)
-		os.makedirs("{}/{}".format(args.result_dir, args.exp_name), exist_ok=True)
 		os.makedirs("{}/{}".format(args.log_dir, args.exp_name), exist_ok=True)
 	elif args.test:
 		if not os.path.isdir("{}/{}".format(args.model_dir, args.exp_name)):
@@ -86,12 +82,8 @@ def main(args):
 	##################
 	## Load dataset ##
 	##################
-	if args.train:
-		train_loader, test_loader = load_train_data(args, device)
-	elif args.test:
-		test_loader = load_test_data(args, device)
-	else:
-		raise ValueError("Mode [train/test] not determined!")
+	train_loader, test_loader = get_dataloader(args, device)
+	
 
 	##################
 	## Build models ##

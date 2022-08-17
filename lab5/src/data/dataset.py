@@ -7,6 +7,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 
+
 class iclevrDataset(Dataset):
 	def __init__(self, args, device, mode="train"):
 		self.args = args
@@ -17,7 +18,7 @@ class iclevrDataset(Dataset):
 		self.object_idx = json.load(open("{}/objects.json".format(self.data_root)))
 
 		
-if self.mode == "train":
+		if self.mode == "train":
 			data_dict = json.load(open("{}/train.json".format(self.data_root)))
 			self.data_list = list(data_dict.items())
 		elif self.mode == "test":

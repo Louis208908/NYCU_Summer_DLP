@@ -1,9 +1,15 @@
-import ipdb
 from torch.utils.data import DataLoader
+import torch.nn as nn
 
 from data.dataset import iclevrDataset
+from prefetch_generator import BackgroundGenerator
 
-def load_train_data(args, device):
+
+class DataLoader_pro(DataLoader):    
+    def __iter__(self):
+        return BackgroundGenerator(super().__iter__());
+
+def get_dataloader(args, device):
 	"""Load i-CLEVR Dataset"""
 	print("\nBuilding training & testing dataset...")
 
@@ -13,33 +19,22 @@ def load_train_data(args, device):
 	print("# training samples: {}".format(len(train_dataset)))
 	print("# testing  samples: {}".format(len(test_dataset)))
 
-	train_loader = DataLoader(
+	train_loader = DataLoader_pro(
 		train_dataset, 
 		num_workers=args.num_workers, 
 		batch_size=args.batch_size, 
-		shuffle=True
+		shuffle=True,
+		pin_memory=True
 	)
-	test_loader = DataLoader(
+	test_loader = DataLoader_pro(
 		test_dataset, 
 		num_workers=args.num_workers, 
 		batch_size=args.batch_size, 
-		shuffle=False
+		shuffle=False,
+		pin_memory=True
 	)
+
+	train_loader = nn.DataParallel(train_loader)
+	test_loader = nn.DataParallel(test_loader)
 
 	return train_loader, test_loader
-
-def load_test_data(args, device):
-	print("\nBuilding testing dataset...")
-
-	test_dataset = iclevrDataset(args, device, "test")
-
-	print("# testing  samples: {}".format(len(test_dataset)))
-
-	test_loader = DataLoader(
-		test_dataset, 
-		num_workers=args.num_workers, 
-		batch_size=args.batch_size, 
-		shuffle=False
-	)
-
-	return test_loader
