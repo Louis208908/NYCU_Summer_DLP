@@ -10,8 +10,8 @@ def weights_init(m):
 	"""Customized weights initialization"""
 	classname = m.__class__.__name__
 	if classname.find('Conv') != -1:
-		nn.init.normal_(m.module.weight.data, 0.0, 0.02)
-		nn.init.constant_(m.module.bias.data, 0) ## NEW
+		nn.init.normal_(m.weight, 0.0, 0.02)
+		nn.init.constant_(m.bias, 0) ## NEW
 
 
 def build_models(args, device):
