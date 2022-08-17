@@ -39,9 +39,9 @@ class Trainer:
 			self.optimG = optim.Adam(param_optimG, lr=self.args.lr_G, betas=(self.args.beta1, self.args.beta2))
 			self.optimD = optim.Adam(param_optimD, lr=self.args.lr_D, betas=(self.args.beta1, self.args.beta2))
 			self.optimQ = optim.Adam(param_optimQ, lr=self.args.lr_D, betas=(self.args.beta1, self.args.beta2))
-			self.optimG = nn.Dataparallel(self.optimG)
-			self.optimD = nn.Dataparallel(self.optimD)
-			self.optimQ = nn.Dataparallel(self.optimQ)
+			self.optimG = nn.DataParallel(self.optimG)
+			self.optimD = nn.DataParallel(self.optimD)
+			self.optimQ = nn.DataParallel(self.optimQ)
 
 		elif self.args.gan_type == "cgan" or self.args.gan_type == "wgan" or self.args.gan_type == "wgan-large":
 			self.netG = models[0]
