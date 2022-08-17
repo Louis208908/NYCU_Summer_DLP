@@ -288,7 +288,7 @@ class Trainer:
 		print("Start training {}...".format(self.args.gan_type))
 		for epoch in range(self.args.epochs):
 
-			for step, (img, cond) in enumerate(train_loader):
+			for img, cond in tqdm(train_loader):
 				img  = img.to(self.device)
 				cond = cond.to(self.device)
 
@@ -347,8 +347,8 @@ class Trainer:
 				self.optimG.module.step()
 				self.optimQ.module.step()
 
-				if step % self.args.report_freq == 0:
-					print("[Epoch {:3d}] Loss D: {:.4f}, Loss G: {:.4f}, Loss Q: {:.4f}".format(epoch, loss_D.item(), loss_G.item(), loss_Q.item()))
+				# if step % self.args.report_freq == 0:
+				# 	print("[Epoch {:3d}] Loss D: {:.4f}, Loss G: {:.4f}, Loss Q: {:.4f}".format(epoch, loss_D.item(), loss_G.item(), loss_Q.item()))
 				G_losses.append(loss_G.item())
 				D_losses.append(loss_D.item())
 				Q_losses.append(loss_Q.item())
