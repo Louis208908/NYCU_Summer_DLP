@@ -165,7 +165,7 @@ class Trainer:
 						self.netD.eval()
 						with torch.no_grad():
 							pred_img = self.netG(fixed_noise[eval_iter], test_cond)
-						eval_acc = self.evaluator.evaluate(pred_img, test_cond)
+						eval_acc = self.evaluator.module.evaluate(pred_img, test_cond)
 						eval_accs.append(eval_acc)
 
 						if eval_acc > best_eval_acc:
@@ -253,7 +253,7 @@ class Trainer:
 						self.netD.eval()
 						with torch.no_grad():
 							pred_img = self.netG(fixed_noise[eval_iter], test_cond)
-						eval_acc = self.evaluator.evaluate(pred_img, test_cond)
+						eval_acc = self.evaluator.module.evaluate(pred_img, test_cond)
 						eval_accs.append(eval_acc)
 
 						if eval_acc > best_eval_acc:
@@ -358,7 +358,7 @@ class Trainer:
 			self.shared.eval()
 			with torch.no_grad():
 				pred_img = self.netG(fixed_noise, test_cond)
-			acc = self.evaluator.evaluate(pred_img, test_cond)
+			acc = self.evaluator.module.evaluate(pred_img, test_cond)
 			print("[Epoch {:3d}] Accuracy: {:.4f}".format(epoch, acc))
 			
 			## Save generated images
@@ -397,7 +397,7 @@ class Trainer:
 			self.netD.eval()
 			with torch.no_grad():
 				pred_img = self.netG(fixed_noise[eval_iter], test_cond)
-			acc = self.evaluator.evaluate(pred_img, test_cond)
+			acc = self.evaluator.module.evaluate(pred_img, test_cond)
 			print("Accuracy: {:.4f}".format(acc))
 
 			if acc > best_acc:
