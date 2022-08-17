@@ -34,7 +34,7 @@ def get_dataloader(args, device):
 		pin_memory=True
 	)
 
-	train_loader = nn.DataParallel(train_loader)
-	test_loader = nn.DataParallel(test_loader)
+	# train_loader = nn.DataParallel(train_loader)
+	# test_loader = nn.DataParallel(test_loader)
 
 	return train_loader, test_loader
