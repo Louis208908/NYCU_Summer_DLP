@@ -182,8 +182,9 @@ class Trainer:
 					if avg_acc > best_acc:
 						best_acc = avg_acc
 						print("[Epoch {:3d}]\tSaving model checkpoints with best accuracy...".format(epoch))
-						torch.save(self.netG.state_dict(), "{}/{}/Generator_{}-{}.pth".format(self.args.model_dir, self.args.exp_name, epoch, step))
-						torch.save(self.netD.state_dict(), "{}/{}/Discriminator_{}-{}.pth".format(self.args.model_dir, self.args.exp_name, epoch, step))
+						os.makedirs("{}/{}".format(self.args.log_dir, avg_acc))
+						torch.save(self.netG.state_dict(), "{}/Generator_{}.pth".format(self.args.log_dir, self.args.gan_type))
+						torch.save(self.netD.state_dict(), "{}/Discriminator_{}.pth".format(self.args.log_dir, self.args.gan_type))
 
 				G_losses.append(loss_G.item())
 				D_losses.append(loss_D.item())
@@ -269,8 +270,9 @@ class Trainer:
 					if avg_acc > best_acc:
 						best_acc = avg_acc
 						print("[Epoch {:3d}] Saving model checkpoints with best accuracy...".format(epoch))
-						torch.save(self.netG.state_dict(), "{}/{}/Generator_{}-{}.pth".format(self.args.model_dir, self.args.exp_name, epoch, step))
-						torch.save(self.netD.state_dict(), "{}/{}/Discriminator_{}-{}.pth".format(self.args.model_dir, self.args.exp_name, epoch, step))
+						os.makedirs("{}/{}".format(self.args.log_dir, avg_acc))
+						torch.save(self.netG.state_dict(), "{}/Generator_{}.pth".format(self.args.log_dir, self.args.gan_type))
+						torch.save(self.netD.state_dict(), "{}/Discriminator_{}.pth".format(self.args.log_dir, self.args.gan_type))
 
 				G_losses.append(loss_G.item())
 				D_losses.append(loss_D.item())
@@ -370,7 +372,7 @@ class Trainer:
 			if acc > best_acc:
 				best_acc = acc
 				print("[Epoch {:3d}] Saving model checkpoints with best accuracy...".format(epoch))
-				os.make_dir("{}/{}".format(self.args.model_dir, acc))
+				os.makedirs("{}/{}".format(self.args.log_dir, acc))
 				torch.save(self.netG.state_dict(), "{}/{}/Generator.pth".format(self.args.log_dir, acc))
 				torch.save(self.netD.state_dict(), "{}/{}/ClassifierD.pth".format(self.args.log_dir, acc))
 				torch.save(self.netQ.state_dict(), "{}/{}/ClassifierQ.pth".format(self.args.log_dir, acc))
