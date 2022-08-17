@@ -36,7 +36,7 @@ class iclevrDataset(Dataset):
 	def __getitem__(self, index):
 		if self.mode == "train":
 			## Read image
-			img_arr = Image.open("{}/iclevr/{}".format(self.data_root, self.data_list[index][0])).convert("RGB")
+			img_arr = Image.open("{}/{}".format(self.data_root, self.data_list[index][0])).convert("RGB")
 			img_tensor = self.transforms(img_arr)
 			img_tensor = img_tensor
 
