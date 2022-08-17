@@ -53,7 +53,7 @@ def parse_args():
 
 	## Paths
 	parser.add_argument("--data_root", default="./lab5", help="root directory for data")
-	parser.add_argument("--log_dir", default="./lab5", help="base directory to save training logs")
+	parser.add_argument("--log_dir", default="./lab5_log", help="base directory to save training logs")
 	parser.add_argument("--test_file", default="test.json")
 
 	args = parser.parse_args()
