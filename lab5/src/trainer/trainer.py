@@ -117,7 +117,7 @@ class Trainer:
 				self.models.optimD.step()
 
 				print("updating generator")
-				for _ in tqdm(range(self.args.dis_iter)):
+				for _ in tqdm(range(self.args.dis_iters)):
 					self.models.optimG.zero_grad()
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, aux_label)
