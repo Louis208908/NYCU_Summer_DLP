@@ -141,7 +141,7 @@ class Trainer:
 				self.models.generator.eval()
 				self.models.discriminator.eval()
 				with torch.no_grad():
-					for cond in tqdm(test_loader):
+					for id,cond in enumerate(test_loader):
 						cond = cond.to(self.device)
 						batch_size = cond.shape[0]
 						noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
