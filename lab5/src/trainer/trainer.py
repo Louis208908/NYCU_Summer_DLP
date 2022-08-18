@@ -76,7 +76,7 @@ class Trainer:
 		for epoch in tqdm(range(self.args.epochs)):
 			for real_image, cond in tqdm(train_loader, desc="[Epoch {:3d}]".format(epoch)):
 
-				self.models.networks.optimD.zero_grad()
+				self.models.optimD.zero_grad()
 				real_image = real_image.to(self.device)
 				cond = cond.to(self.device)
 
@@ -114,11 +114,11 @@ class Trainer:
 
 				errD = errD_real + errD_fake
 
-				self.models.networks.optimD.module.step()
+				self.models.optimD.module.step()
 
 				print("updating generator")
 				for _ in tqdm(range(self.args.dis_iter)):
-					self.models.networks.optimG.zero_grad()
+					self.models.optimG.zero_grad()
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, aux_label)
 					dis_output, aux_output = self.models.discriminator(fake_img)
@@ -126,7 +126,7 @@ class Trainer:
 					aux_errG = self.aux_criterion(aux_output, aux_label)
 					errG = dis_errG + self.args.aux_weight * aux_errG
 					errG.backward()
-					self.models.networks.optimG.module.step()
+					self.models.optimG.module.step()
 
 				total_loss_d += errD.item()
 				total_loss_g += errG.item()
