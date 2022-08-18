@@ -119,7 +119,7 @@ class Trainer:
 
 				self.models.optimD.step()
 
-				print("updating generator")
+				# print("updating generator")
 				for _ in range(self.args.dis_iters):
 					self.models.optimG.zero_grad()
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
