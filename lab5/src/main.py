@@ -69,7 +69,7 @@ def main(args):
 
 	## Set device
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+	print("Device: ", device)
 
 	#創建一個timestr，獲取當前時間，然後加上一個-，讓時間可以被分割
 	timestr = time.strftime("%Y%m%d-%H%M%S")
