@@ -2,7 +2,6 @@ import os
 import torch
 import tqdm
 import torch.nn as nn
-import torch.nn.fucondition_dimtional as F
 import torch.optim as optim
 
 

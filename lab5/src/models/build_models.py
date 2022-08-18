@@ -19,9 +19,9 @@ def build_models(args, device):
 	print("\nBuilding models...")
 	print("GAN type: {}".format(args.gan_type))
 
-	if args.gan_type == "ACGAN":
+	if args.gan_type == "acgan":
 		network = ACGAN(args, device)
-	elif args.gan_type == "DCGAN":
+	elif args.gan_type == "dcgan":
 		network = DCGAN(args, device)
 	
 	return network;
