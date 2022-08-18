@@ -4,7 +4,8 @@ import torch
 import torch.nn as nn
 
 ## Self-defined
-from models import ACGAN, DCGAN
+from models.ACGAN import ACGAN
+from models.DCGAN import DCGAN
 
 def weights_init(m):
     classname = m.__class__.__name__
