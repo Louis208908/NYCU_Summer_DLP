@@ -26,5 +26,5 @@ def build_models(args, device):
 		network = DCGAN(args, device)
 
 	# network = nn.DataParallel(network)
-	
+	network = network.to(device)
 	return network;
