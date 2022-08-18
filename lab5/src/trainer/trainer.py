@@ -69,6 +69,9 @@ class Trainer:
 		G_losses, D_losses = [], []
 		best_acc = 0
 		iters = 0
+		total_loss_d = 0
+		total_loss_g = 0
+		total_acc = 0
 
 
 		print("Start training {}...".format(self.args.gan_type))
