@@ -102,7 +102,7 @@ class Trainer:
 				errD_real.backward()
 
 				D_x = dis_output.mean().item()
-				accuracy = self.evaluator.module.compute_accuracy(aux_output, aux_label)
+				accuracy = self.evaluator.module.compute_acc(aux_output, aux_label)
 
 				dis_output, aux_output = self.models.discriminator(fake_img.detach())
 
