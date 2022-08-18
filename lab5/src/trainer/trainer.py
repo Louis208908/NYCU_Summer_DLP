@@ -75,8 +75,8 @@ class Trainer:
 
 
 		print("Start training {}...".format(self.args.gan_type))
-		for epoch in tqdm(range(self.args.epochs)):
-			for real_image, cond in tqdm(train_loader, desc="[Epoch {:3d}]".format(epoch)):
+		for epoch in range(self.args.epochs):
+			for real_image, cond in tqdm(train_loader):
 
 				self.models.optimD.zero_grad()
 				real_image = real_image.to(self.device)
@@ -120,7 +120,7 @@ class Trainer:
 				self.models.optimD.step()
 
 				print("updating generator")
-				for _ in tqdm(range(self.args.dis_iters)):
+				for _ in range(self.args.dis_iters):
 					self.models.optimG.zero_grad()
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, aux_label)
