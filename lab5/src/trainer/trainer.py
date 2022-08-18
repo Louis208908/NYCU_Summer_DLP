@@ -85,6 +85,7 @@ class Trainer:
 				# Use soft and noisy labels [0.7, 1.0]. Salimans et. al. 2016
 				real_label = ((1.0 - 0.7) * torch.rand(batch_size) + 0.7).to(self.device)
 				aux_label = cond
+				aux_label = aux_label.to(self.device)
 
 				noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 				
