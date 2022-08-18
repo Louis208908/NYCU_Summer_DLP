@@ -88,7 +88,7 @@ class Trainer:
 
 				noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 				
-				fake_img = self.models.generator(noise, aux_label)
+				fake_img = self.models.module.generator(noise, aux_label)
 				fake_label = ((0.3 - 0.0) * torch.rand(batch_size) + 0.0).to(self.device)
 
 				# occasionally flip the labels when training the discriminator
@@ -104,7 +104,7 @@ class Trainer:
 				D_x = dis_output.mean().item()
 				accuracy = self.evaluator.module.compute_accuracy(aux_output, aux_label)
 
-				dis_output, aux_output = self.models.discriminator(fake_img.detach())
+				dis_output, aux_output = self.models.module.discriminator(fake_img.detach())
 
 				dis_errD_fake = self.dis_criterion(dis_output, fake_label)
 				aux_errD_fake = self.aux_criterion(aux_output, aux_label)
@@ -120,8 +120,8 @@ class Trainer:
 				for _ in tqdm(range(self.args.dis_iter)):
 					self.models.module.optimG.zero_grad()
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
-					fake_img = self.models.generator(noise, aux_label)
-					dis_output, aux_output = self.models.discriminator(fake_img)
+					fake_img = self.models.module.generator(noise, aux_label)
+					dis_output, aux_output = self.models.module.discriminator(fake_img)
 					dis_errG = self.dis_criterion(dis_output, real_label)
 					aux_errG = self.aux_criterion(aux_output, aux_label)
 					errG = dis_errG + self.args.aux_weight * aux_errG
@@ -133,20 +133,20 @@ class Trainer:
 				total_acc += accuracy
 				
 
-				self.models.generator.eval()
-				self.models.discriminator.eval()
+				self.models.module.generator.eval()
+				self.models.module.discriminator.eval()
 				with torch.no_grad():
 					for cond in tqdm(test_loader):
 						cond = cond.to(self.device)
 						batch_size = cond.shape[0]
 						noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
-						fake_img = self.models.generator(noise, cond)
+						fake_img = self.models.module.generator(noise, cond)
 						acc = self.evaluator.module.evaluate(fake_img, cond)
 						if acc > best_acc:
 							print("get a better accuracy: {}".format(acc))
 							best_acc = acc
-							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
-							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
+							torch.save(self.models.module.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
+							torch.save(self.models.module.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 
 		# self.log_writer.close()
 
