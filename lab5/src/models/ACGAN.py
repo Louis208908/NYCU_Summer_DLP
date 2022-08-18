@@ -34,7 +34,7 @@ class Generator(nn.Module):
 
         # condition embedding
         self.label_emb = nn.Sequential(
-            nn.Linear(self.numm_classes, self.condition_dim),
+            nn.Linear(self.numS_classes, self.condition_dim),
             nn.LeakyReLU(0.2, True)
         )
         self.main = nn.Sequential(
@@ -75,7 +75,7 @@ class Discriminator(nn.Module):
         self.num_classes = args.num_classes
         self.img_size = args.img_size
 
-        
+
         self.main = nn.Sequential(
             # input is (rgb chnannel = 3) x 64 x 64
             nn.Conv2d(3, self.discriminator_dim, 3, 2, 1, bias=False),
