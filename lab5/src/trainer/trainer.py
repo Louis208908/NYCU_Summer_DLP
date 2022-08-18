@@ -146,10 +146,11 @@ class Trainer:
 						fake_img = self.models.generator(noise, cond)
 						acc = self.evaluator.module.evaluate(fake_img, cond)
 						if acc > best_acc:
-							print("get a better accuracy: {}".format(acc))
-							best_acc = acc
-							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
-							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
+							if acc > 50:
+								print("get a better accuracy: {}".format(acc))
+								best_acc = acc
+								torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
+								torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 
 		# self.log_writer.close()
 
