@@ -36,6 +36,7 @@ def parse_args():
 
 	## Parameters of model
 	parser.add_argument("--img_size", default=64, type=int, help="size of each image dimension")
+	parser.add_argument("--input_dim", default=64, type=int, help="size of each image dimension")
 	parser.add_argument("--num_classes", default=24, type=int, help="number of classes")
 	parser.add_argument("--latent_dim", default=100, type=int, help="size of the latent z vector")
 	parser.add_argument("--discriminator_dim", default=64, type=int, help="number of discriminators")
