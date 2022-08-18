@@ -75,27 +75,27 @@ class Trainer:
 		for epoch in tqdm(range(self.args.epochs)):
 			for real_image, cond in tqdm(train_loader, desc="[Epoch {:3d}]".format(epoch)):
 
-				self.models.module.optimD.zero_grad()
-				real_image = real_image.cuda()
-				cond = cond.cuda()
+				self.models.optimD.module.zero_grad()
+				real_image = real_image.to(self.device)
+				cond = cond.to(self.device)
 
 				batch_size = real_image.shape[0]
 
 				# Use soft and noisy labels [0.7, 1.0]. Salimans et. al. 2016
-				real_label = ((1.0 - 0.7) * torch.rand(batch_size) + 0.7).cuda()
+				real_label = ((1.0 - 0.7) * torch.rand(batch_size) + 0.7).to(self.device)
 				aux_label = cond
 				aux_label = aux_label.to(self.device)
 
-				noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).cuda()
+				noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 				
-				fake_img = self.models.module.generator(noise, aux_label)
+				fake_img = self.models.generator(noise, aux_label)
 				fake_label = ((0.3 - 0.0) * torch.rand(batch_size) + 0.0).to(self.device)
 
 				# occasionally flip the labels when training the discriminator
 				if random.random() < 0.1:
 					real_label, fake_label = fake_label, real_label
 
-				dis_output, aux_output = self.models.module.discriminator(real_image)
+				dis_output, aux_output = self.models.discriminator(real_image)
 				dis_errD_real = self.dis_criterion(dis_output, real_label)
 				aux_errD_real = self.aux_criterion(aux_output, aux_label)
 				errD_real = dis_errD_real + self.args.aux_weight * aux_errD_real
@@ -104,7 +104,7 @@ class Trainer:
 				D_x = dis_output.mean().item()
 				accuracy = self.evaluator.module.compute_accuracy(aux_output, aux_label)
 
-				dis_output, aux_output = self.models.module.discriminator(fake_img.detach())
+				dis_output, aux_output = self.models.discriminator(fake_img.detach())
 
 				dis_errD_fake = self.dis_criterion(dis_output, fake_label)
 				aux_errD_fake = self.aux_criterion(aux_output, aux_label)
@@ -114,39 +114,39 @@ class Trainer:
 
 				errD = errD_real + errD_fake
 
-				self.models.module.optimD.module.step()
+				self.models.optimD.module.step()
 
 				print("updating generator")
 				for _ in tqdm(range(self.args.dis_iter)):
-					self.models.module.optimG.zero_grad()
+					self.models.optimG.module.zero_grad()
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
-					fake_img = self.models.module.generator(noise, aux_label)
-					dis_output, aux_output = self.models.module.discriminator(fake_img)
+					fake_img = self.models.generator(noise, aux_label)
+					dis_output, aux_output = self.models.discriminator(fake_img)
 					dis_errG = self.dis_criterion(dis_output, real_label)
 					aux_errG = self.aux_criterion(aux_output, aux_label)
 					errG = dis_errG + self.args.aux_weight * aux_errG
 					errG.backward()
-					self.models.module.optimG.module.step()
+					self.models.optimG.module.step()
 
 				total_loss_d += errD.item()
 				total_loss_g += errG.item()
 				total_acc += accuracy
 				
 
-				self.models.module.generator.eval()
-				self.models.module.discriminator.eval()
+				self.models.generator.eval()
+				self.models.discriminator.eval()
 				with torch.no_grad():
 					for cond in tqdm(test_loader):
 						cond = cond.to(self.device)
 						batch_size = cond.shape[0]
 						noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
-						fake_img = self.models.module.generator(noise, cond)
+						fake_img = self.models.generator(noise, cond)
 						acc = self.evaluator.module.evaluate(fake_img, cond)
 						if acc > best_acc:
 							print("get a better accuracy: {}".format(acc))
 							best_acc = acc
-							torch.save(self.models.module.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
-							torch.save(self.models.module.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
+							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
+							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 
 		# self.log_writer.close()
 

@@ -25,6 +25,6 @@ def build_models(args, device):
 	elif args.gan_type == "dcgan":
 		network = DCGAN(args, device)
 
-	network = nn.DataParallel(network)
+	# network = nn.DataParallel(network)
 	
 	return network;
