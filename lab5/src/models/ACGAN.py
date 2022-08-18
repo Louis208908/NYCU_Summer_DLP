@@ -34,7 +34,7 @@ class Generator(nn.Module):
 
         # condition embedding
         self.label_emb = nn.Sequential(
-            nn.Linear(self.numS_classes, self.condition_dim),
+            nn.Linear(self.num_classes, self.condition_dim),
             nn.LeakyReLU(0.2, True)
         )
         self.main = nn.Sequential(
