@@ -76,17 +76,17 @@ class Trainer:
 			for real_image, cond in tqdm(train_loader, desc="[Epoch {:3d}]".format(epoch)):
 
 				self.models.module.optimD.zero_grad()
-				real_image = real_image.to(self.device)
-				cond = cond.to(self.device)
+				real_image = real_image.cuda()
+				cond = cond.cuda()
 
 				batch_size = real_image.shape[0]
 
 				# Use soft and noisy labels [0.7, 1.0]. Salimans et. al. 2016
-				real_label = ((1.0 - 0.7) * torch.rand(batch_size) + 0.7).to(self.device)
+				real_label = ((1.0 - 0.7) * torch.rand(batch_size) + 0.7).cuda()
 				aux_label = cond
 				aux_label = aux_label.to(self.device)
 
-				noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
+				noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).cuda()
 				
 				fake_img = self.models.module.generator(noise, aux_label)
 				fake_label = ((0.3 - 0.0) * torch.rand(batch_size) + 0.0).to(self.device)
@@ -95,7 +95,7 @@ class Trainer:
 				if random.random() < 0.1:
 					real_label, fake_label = fake_label, real_label
 
-				dis_output, aux_output = self.models.discriminator(real_image)
+				dis_output, aux_output = self.models.module.discriminator(real_image)
 				dis_errD_real = self.dis_criterion(dis_output, real_label)
 				aux_errD_real = self.aux_criterion(aux_output, aux_label)
 				errD_real = dis_errD_real + self.args.aux_weight * aux_errD_real
