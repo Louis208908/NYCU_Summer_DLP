@@ -20,8 +20,7 @@ class Trainer:
 	def __init__(self, args, device, models):
 		self.args = args
 		self.device = device
-
-		self.models = models
+		self.models = nn.DataParallel(models)
 
 		## Create classification model for evaluation
 		self.evaluator = evaluation_model(self.args)
