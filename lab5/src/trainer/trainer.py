@@ -115,22 +115,23 @@ class Trainer:
 				total_acc += accuracy
 				
 
-				self.models.generator.eval()
-				self.models.discriminator.eval()
-				with torch.no_grad():
-					for cond in tqdm(test_loader):
-						cond = cond.to(self.device)
-						batch_size = cond.shape[0]
-						noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
-						fake_img = self.models.generator(noise, cond)
-						acc = self.evaluator.module.evaluate(fake_img, cond)
-						if acc > best_acc:
-							print("get a better accuracy: {}".format(acc))
-							best_acc = acc
-							if acc > 50:
-								torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
-								torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
-
+			self.models.generator.eval()
+			self.models.discriminator.eval()
+			with torch.no_grad():
+				for cond in tqdm(test_loader):
+					cond = cond.to(self.device)
+					batch_size = cond.shape[0]
+					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
+					fake_img = self.models.generator(noise, cond)
+					acc = self.evaluator.module.evaluate(fake_img, cond)
+					if acc > best_acc:
+						print("get a better accuracy: {}".format(acc))
+						best_acc = acc
+						if acc > 50:
+							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
+							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
+			self.models.generator.train()
+			self.models.discriminator.train()
 		# self.log_writer.close()
 
 	def train_dcgan(self, train_loader, test_loader):
