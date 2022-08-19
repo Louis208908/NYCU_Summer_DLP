@@ -53,6 +53,8 @@ class Trainer:
 
 		print("Start training {}...".format(self.args.gan_type))
 		for epoch in range(self.args.epochs):
+			self.models.generator.train()
+			self.models.discriminator.train()
 			if epoch % 5 == 0:
 				print("now epoch:{}".format(epoch))
 			for real_image, cond in tqdm(train_loader):
@@ -131,96 +133,83 @@ class Trainer:
 						if acc > 50:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
-			self.models.generator.train()
-			self.models.discriminator.train()
 		self.log_writer.close()
 		return best_acc
 
 	def train_dcgan(self, train_loader, test_loader):
-		"""Training loops for cgan"""
+		"""Training loops for dcgan"""
+
 		G_losses, D_losses = [], []
 		best_acc = 0
-
-		test_cond = next(iter(test_loader)).to(self.device)
-		#fixed_noise = torch.randn(test_cond.shape[0], self.args.z_dim, 1, 1, device=self.device)
-		fixed_noise = [torch.randn(test_cond.shape[0], self.args.z_dim, 1, 1, device=self.device) for eval_ in range(self.args.n_eval)]
-		fixed_noise = torch.stack(fixed_noise)
-		torch.save(fixed_noise, "{}/{}/fixed_noise.pt".format(self.args.model_dir, self.args.exp_name, self.args.checkpoint_epoch))
+		iters = 0
+		total_loss_d = 0
+		total_loss_g = 0
+		total_acc = 0
 
 		print("Start training {}...".format(self.args.gan_type))
 		for epoch in range(self.args.epochs):
-
-			for step, (img, cond) in enumerate(tqdm(train_loader, desc="[Epoch {:3d}]".format(epoch))):
-				img  = img.to(self.device)
+			self.models.generator.train()
+			self.models.discriminator.train()
+			if epoch % 5 == 0:
+				print("now epoch:{}".format(epoch))
+			for real_image, cond in tqdm(train_loader):
+				self.models.optimD.zero_grad()
+				self.models.optimG.zero_grad()
+				real_image = real_image.to(self.device)
 				cond = cond.to(self.device)
 
-				batch_len = img.shape[0]
+				batch_size = real_image.shape[0]
 
-				real_label = torch.ones( batch_len, device=self.device)
-				fake_label = torch.zeros(batch_len, device=self.device)
+				# Use soft and noisy labels [0.7, 1.0]. Salimans et. al. 2016
+				real_label = ((1.0 - 0.7) * torch.rand(batch_size) + 0.7).to(self.device)
+
+
+				noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 				
-				##########################
-				## Update discriminator ##
-				##########################
-				## Train all-real batch
-				self.netD.zero_grad()
-				preds = self.netD(img, cond)
-				loss_D_real = nn.BCELoss()(preds.flatten(), real_label)
+				fake_img = self.models.generator(noise, cond)
+				fake_label = ((0.3 - 0.0) * torch.rand(batch_size) + 0.0).to(self.device)
 
-				## Generate fake & train all-fake batch
-				noise = torch.randn(batch_len, self.args.z_dim, 1, 1, device=self.device)
-				fake  = self.netG(noise, cond)
-				preds = self.netD(fake.detach(), cond)
-				loss_D_fake = nn.BCELoss()(preds.flatten(), fake_label)
-				loss_D = loss_D_real + loss_D_fake
-				loss_D.backward()
-				self.optimD.step()
+				# occasionally flip the labels when training the discriminator
+				if random.random() < 0.1:
+					real_label, fake_label = fake_label, real_label
 
-				######################
-				## Update generator ##
-				######################
-				for _ in range(4):
-					self.netG.zero_grad()
-					noise = torch.randn(batch_len, self.args.z_dim, 1, 1, device=self.device)
-					fake  = self.netG(noise, cond)
-					preds = self.netD(fake, cond)
-					
-					loss_G = nn.BCELoss()(preds.flatten(), real_label)
-					loss_G.backward()
-					self.optimG.step()
+				output= self.models.discriminator(real_image,cond)
+				D_x = output.mean().item()
+				errD_real = nn.BCELoss()(output, real_label)
+				
+				output = self.models.discriminator(fake_img.detach(),cond)
+				errD_fake = nn.BCELoss()(output, fake_label)
+				D_G_z1 = output.mean().item()
 
-				if step % self.args.report_freq == 0:
-					print("[Epoch {:3d}] Loss D: {:.4f}, Loss G: {:.4f}".format(epoch, loss_D.item(), loss_G.item()))
+				errD = errD_real + errD_fake
+				errD.backward()
+				self.models.optimD.step()
 
-					## Evaluate classification results
-					eval_accs, best_eval_acc, best_pred_img = [], 0, None
-					for eval_iter in range(self.args.n_eval):
-						self.netG.eval()
-						self.netD.eval()
-						with torch.no_grad():
-							pred_img = self.netG(fixed_noise[eval_iter], test_cond)
-						eval_acc = self.evaluator.module.evaluate(pred_img, test_cond)
-						eval_accs.append(eval_acc)
+				# print("updating generator")
+				generator_label = torch.ones(batch_size).to(self.device)  # fake labels are real for generator cost
+				output = self.models.discriminator(fake_img, cond)
+				errG = nn.BCELoss()(output, generator_label)
+				errG.backward()
+				D_G_z2 = output.mean().item()
+				self.models.optimG.step()
+			self.models.generator.eval()
+			self.models.discriminator.eval()
+			with torch.no_grad():
+				for cond in tqdm(test_loader):
+					cond = cond.to(self.device)
+					batch_size = cond.shape[0]
+					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
+					fake_img = self.models.generator(noise, cond)
+					acc = self.evaluator.module.evaluate(fake_img, cond)
+					self.log_writer.write("epoch[{}]:, acc:{}\n".format(epoch, acc))
+					if acc > best_acc:
+						print("get a better accuracy: {}".format(acc))
+						best_acc = acc
+						if acc > 50:
+							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
+							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 
-						if eval_acc > best_eval_acc:
-							best_eval_acc = eval_acc
-							best_pred_img = pred_img
-					avg_acc = sum(eval_accs) / len(eval_accs)
-					print("[Epoch {:3d}]\tAccuracy: {:.4f}".format(epoch, avg_acc))
-					
-					## Save generated images
-					
-					## Save model checkpoint
-					if avg_acc > best_acc:
-						best_acc = avg_acc
-						save_image(pred_img, "{}/pred_{:d}.png".format(self.args.log_dir, epoch), normalize=True)
-						print("[Epoch {:3d}] Saving model checkpoints with best accuracy...".format(epoch))
-						os.makedirs("{}/{}".format(self.args.log_dir, avg_acc))
-						torch.save(self.netG.state_dict(), "{}/{}/Generator_{}.pth".format(self.args.log_dir,avg_acc, self.args.gan_type))
-						torch.save(self.netD.state_dict(), "{}/{}/Discriminator_{}.pth".format(self.args.log_dir,avg_acc, self.args.gan_type))
-
-				G_losses.append(loss_G.item())
-				D_losses.append(loss_D.item())
+				
 
 
 	def test(self, test_loader):
