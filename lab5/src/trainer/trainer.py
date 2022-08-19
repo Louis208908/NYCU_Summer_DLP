@@ -133,6 +133,7 @@ class Trainer:
 			self.models.generator.train()
 			self.models.discriminator.train()
 		# self.log_writer.close()
+		return best_acc
 
 	def train_dcgan(self, train_loader, test_loader):
 		"""Training loops for cgan"""
