@@ -14,8 +14,11 @@ class DCGAN:
         self.generator = nn.DataParallel(self.generator)
         self.discriminator = nn.DataParallel(self.discriminator)
 
-        self.optimG = optim.AdamW(self.generator.parameters(), lr=args.lr_G, betas=(args.beta1, args.beta2))
-        self.optimD = optim.AdamW(self.discriminator.parameters(), lr=args.lr_D, betas=(args.beta1, args.beta2))
+        # self.optimG = optim.Adam(self.generator.parameters(), lr=args.lr_G, betas=(args.beta1, args.beta2))
+        # self.optimD = optim.Adam(self.discriminator.parameters(), lr=args.lr_D, betas=(args.beta1, args.beta2))
+        # using RMSProp as the optimizer for the generator and discriminator
+        self.optimG = optim.RMSprop(self.generator.parameters(), lr=args.lr_G)
+        self.optimD = optim.RMSprop(self.discriminator.parameters(), lr=args.lr_D)
 
         self.optimD = nn.DataParallel(self.optimD).module
         self.optimG = nn.DataParallel(self.optimG).module
