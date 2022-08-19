@@ -38,30 +38,7 @@ class Trainer:
 			self.train_acgan(train_loader, test_loader)
 		elif self.args.gan_type == "dcgan":
 			self.train_dcgan(train_loader, test_loader)
-
-
-	def compute_gradient_penalty(self, real, fake, cond):
-		"""Calculates the gradient penalty loss for WGAN GP"""
-		## Random weight term for interpolation between real and fake samples
-		alpha = torch.rand(real.shape[0], 1, 1, 1).to(self.device)
-		
-		## Get random interpolation between real and fake samples
-		interpolates = (alpha * real + ((1 - alpha) * fake)).requires_grad_(True)
-		d_interpolates, _ = self.netD(interpolates, cond)
-		
-		## Get gradient w.r.t. interpolates
-		gradients = autograd.grad(
-			inputs=interpolates,
-			outputs=d_interpolates,
-			grad_outputs=torch.ones(d_interpolates.shape, device=self.device),
-			create_graph=True,
-			retain_graph=True,
-			only_inputs=True,
-		)[0]
-		gradients = gradients.view(gradients.size(0), -1)
-		gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-		
-		return gradient_penalty
+	
 
 	def train_acgan(self, train_loader, test_loader):
 		"""Training loops for acgan"""
@@ -78,7 +55,7 @@ class Trainer:
 		for epoch in range(self.args.epochs):
 			if epoch % 5 == 0:
 				print("now epoch:{}".format(epoch))
-			for idx, (real_image, cond) in enumerate(train_loader):
+			for real_image, con in tqdm(train_loader):
 
 				self.models.optimD.zero_grad()
 				real_image = real_image.to(self.device)
@@ -141,7 +118,7 @@ class Trainer:
 				self.models.generator.eval()
 				self.models.discriminator.eval()
 				with torch.no_grad():
-					for id,cond in enumerate(test_loader):
+					for cond in tqdm(test_loader):
 						cond = cond.to(self.device)
 						batch_size = cond.shape[0]
 						noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
