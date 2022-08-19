@@ -124,6 +124,7 @@ class Trainer:
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, cond)
 					acc = self.evaluator.module.evaluate(fake_img, cond)
+					self.log_writer.write("epoch[{}]:, acc:{}\n".format(epoch, acc))
 					if acc > best_acc:
 						print("get a better accuracy: {}".format(acc))
 						best_acc = acc
@@ -132,7 +133,7 @@ class Trainer:
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 			self.models.generator.train()
 			self.models.discriminator.train()
-		# self.log_writer.close()
+		self.log_writer.close()
 		return best_acc
 
 	def train_dcgan(self, train_loader, test_loader):
