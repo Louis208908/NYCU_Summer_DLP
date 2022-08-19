@@ -127,6 +127,7 @@ class Trainer:
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, cond)
 					acc = self.evaluator.module.evaluate(fake_img, cond)
+					print("epoch[{}], accuracy: {}".format(epoch,acc))
 					self.log_writer.write(("epoch[{}]:, acc:{}\n".format(epoch, acc)))
 					if acc > best_acc:
 						print("get a better accuracy: {}".format(acc))
@@ -202,6 +203,7 @@ class Trainer:
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, cond)
 					acc = self.evaluator.module.evaluate(fake_img, cond)
+					print("epoch[{}], accuracy: {}".format(epoch,acc))
 					self.log_writer.write(("epoch[{}]:, acc:{}\n".format(epoch, acc)))
 					if acc > best_acc:
 						print("get a better accuracy: {}".format(acc))
