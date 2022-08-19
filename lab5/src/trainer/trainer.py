@@ -46,13 +46,13 @@ class Trainer:
 		G_losses, D_losses = [], []
 		best_acc = 0
 		iters = 0
-		total_loss_d = 0
-		total_loss_g = 0
-		total_acc = 0
 
 
 		print("Start training {}...".format(self.args.gan_type))
 		for epoch in range(self.args.epochs):
+			total_loss_d = 0
+			total_loss_g = 0
+			total_acc = 0
 			self.models.generator.train()
 			self.models.discriminator.train()
 			if epoch % 5 == 0:
@@ -105,8 +105,9 @@ class Trainer:
 					self.models.optimG.zero_grad()
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, aux_label)
+					generator_label = torch.ones(batch_size).to(self.device)
 					dis_output, aux_output = self.models.discriminator(fake_img)
-					dis_errG = self.dis_criterion(dis_output, real_label)
+					dis_errG = self.dis_criterion(dis_output, generator_label)
 					aux_errG = self.aux_criterion(aux_output, aux_label)
 					errG = dis_errG + self.args.aux_weight * aux_errG
 					errG.backward()
@@ -208,6 +209,7 @@ class Trainer:
 						if acc > 50:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
+		return best_acc
 
 				
 
