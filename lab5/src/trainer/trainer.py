@@ -108,7 +108,8 @@ class Trainer:
 					generator_label = torch.ones(batch_size).to(self.device)
 					dis_output, aux_output = self.models.discriminator(fake_img)
 					dis_errG = self.dis_criterion(dis_output, generator_label)
-					aux_errG = self.aux_criterion(aux_output, aux_label)
+					# aux_errG = self.aux_criterion(aux_output, aux_label)
+					aux_errG = nn.CrossEntropyLoss()(aux_output, aux_label)
 					errG = dis_errG + self.args.aux_weight * aux_errG
 					errG.backward()
 					self.models.optimG.step()
