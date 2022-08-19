@@ -5,6 +5,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight, 1.0, 0.02)
+        nn.init.zeros_(m.bias)
+
 
 class ACGAN:
     def __init__(self, args, device):
@@ -12,6 +20,9 @@ class ACGAN:
         self.device = device
         self.generator = Generator(args);
         self.discriminator = Discriminator(args);
+        self.generator.apply(weights_init)
+        self.discriminator.apply(weights_init)
+
         self.generator = nn.DataParallel(self.generator)
         self.discriminator = nn.DataParallel(self.discriminator)
         self.generator = self.generator.to(device)
