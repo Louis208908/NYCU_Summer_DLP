@@ -27,7 +27,7 @@ def parse_args():
 	parser.add_argument("--lr_G", default=0.0002, type=float, help="learning rate for generator")
 	parser.add_argument("--lr_D", default=0.0002, type=float, help="learning rate for discriminator")
 	parser.add_argument("--batch_size", default=128, type=int, help="batch size")
-	parser.add_argument("--optimizer", default="adam", help="optimizer to train with")
+	parser.add_argument("--optimizer", default="adam",choices=['adam','adamw','rmsprop'] ,help="optimizer to train with")
 	parser.add_argument("--beta1", default=0.5, type=float, help="beta1 for adam optimizer")
 	parser.add_argument("--beta2", default=0.999, type=float, help="beta2 for adam optimizer")
 	parser.add_argument("--epochs", type=int, default=300, help="number of epochs to train for")
