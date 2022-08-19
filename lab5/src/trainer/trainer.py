@@ -55,7 +55,7 @@ class Trainer:
 		for epoch in range(self.args.epochs):
 			if epoch % 5 == 0:
 				print("now epoch:{}".format(epoch))
-			for real_image, con in tqdm(train_loader):
+			for real_image, cond in tqdm(train_loader):
 
 				self.models.optimD.zero_grad()
 				real_image = real_image.to(self.device)
