@@ -177,6 +177,8 @@ class DDPG:
         '''update target network by _soft_ copying from behavior network'''
         for target, behavior in zip(target_net.parameters(), net.parameters()):
             ## TODO ##
+            with torch.no_grad():
+                target.copy_(target * (1.0 - tau) + behavior * tau)
             raise NotImplementedError
 
     def save(self, model_path, checkpoint=False):
@@ -252,13 +254,24 @@ def test(args, env, agent, writer):
     for n_episode, seed in enumerate(seeds):
         total_reward = 0
         env.seed(seed)
-        state = env.reset()
+        state = env.reset(seed)
         ## TODO ##
+        for t in itertools.cound(start=1):
+            if args.render:
+                env.render()
+
+            action = agent.select_action(state)
+            next_state, reward, done, _ = env.step(action)
+
+            state = next_state
+            total_reward += reward
+
         # ...
-        #     if done:
-        #         writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
+            if done:
+                writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
+                rewards.append(total_reward)
         #         ...
-        raise NotImplementedError
+        # raise NotImplementedError
     print('Average Reward', np.mean(rewards))
     env.close()
 
