@@ -152,9 +152,9 @@ class Trainer:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/new_generator_{}.pth".format(new_acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/new_discriminator_{}.pth".format(new_acc))
 				if acc > 50 or new_acc > 50:
-					self.aux_weight -= (self.aux_weight * 0.1)
-					if self.aux_weight < 1:
-						self.aux_weight = 1;
+					self.args.aux_weight -= (self.args.aux_weight * 0.1)
+					if self.args.aux_weight < 1:
+						self.args.aux_weight = 1;
 		self.log_writer.close()
 		return best_acc,new_best_acc
 
