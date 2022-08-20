@@ -210,7 +210,7 @@ def test(args, env, agent, writer):
                 rewards.append(total_reward)
                 break
         #         ...
-        raise NotImplementedError
+        # raise NotImplementedError
     print('Average Reward', np.mean(rewards))
     env.close()
 
