@@ -179,7 +179,7 @@ class DDPG:
             ## TODO ##
             with torch.no_grad():
                 target.copy_(target * (1.0 - tau) + behavior * tau)
-            raise NotImplementedError
+            # raise NotImplementedError
 
     def save(self, model_path, checkpoint=False):
         if checkpoint:
@@ -281,7 +281,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-d', '--device', default='cuda')
     parser.add_argument('-m', '--model', default='ddpg.pth')
-    parser.add_argument('--logdir', default='log/ddpg')
+    parser.add_argument('--logdir', default='./lab6/ddpg')
     # train
     parser.add_argument('--warmup', default=10000, type=int)
     parser.add_argument('--episode', default=1200, type=int)

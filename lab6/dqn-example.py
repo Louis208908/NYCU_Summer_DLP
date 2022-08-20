@@ -35,13 +35,22 @@ class ReplayMemory:
 
 
 class Net(nn.Module):
-    def __init__(self, state_dim=8, action_dim=4, hidden_dim=32):
+    def __init__(self, state_dim=8, action_dim=4, hidden_dim=(400, 300)):
         super().__init__()
         ## TODO ##
-        raise NotImplementedError
+        self.net = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim[0]),
+            nn.ReLU(),
+            nn.Linear(hidden_dim[0], hidden_dim[1]),
+            nn.ReLU(),
+            nn.Linear(hidden_dim[1], action_dim),
+        )
+
+        # raise NotImplementedError
 
     def forward(self, x):
         ## TODO ##
+        return self.net(x)
         raise NotImplementedError
 
 
@@ -52,8 +61,8 @@ class DQN:
         # initialize target network
         self._target_net.load_state_dict(self._behavior_net.state_dict())
         ## TODO ##
-        # self._optimizer = ?
-        raise NotImplementedError
+        self._optimizer = torch.optim.Adam(self._behavior_net.parameters(),args.lr)
+        # raise NotImplementedError
         # memory
         self._memory = ReplayMemory(capacity=args.capacity)
 
@@ -67,7 +76,14 @@ class DQN:
     def select_action(self, state, epsilon, action_space):
         '''epsilon-greedy based on behavior network'''
          ## TODO ##
-        raise NotImplementedError
+        if random.random() < epsilon:
+            return action_space.sample()
+        else:
+            with torch.no_grad():
+                status_quo = torch.from_numpy(state).float().to(self.device)
+                action = self._behavior_net(status_quo)
+                return action.argmax().item()
+        # raise NotImplementedError
 
     def append(self, state, action, reward, next_state, done):
         self._memory.append(state, [action], [reward / 10], next_state,
@@ -85,13 +101,13 @@ class DQN:
             self.batch_size, self.device)
 
         ## TODO ##
-        # q_value = ?
-        # with torch.no_grad():
-        #    q_next = ?
-        #    q_target = ?
-        # criterion = ?
-        # loss = criterion(q_value, q_target)
-        raise NotImplementedError
+        q_value = torch.gather(self._behavior_net(state), 1, action)
+        with torch.no_grad():
+           q_next = torch.max(self._target_net(next_state), dim=1)[0].unsqueeze(1)
+           q_target = reward + gamma * q_next * (1 - done)
+        criterion = nn.MSELoss()
+        loss = criterion(q_value, q_target)
+        # raise NotImplementedError
         # optimize
         self._optimizer.zero_grad()
         loss.backward()
@@ -101,7 +117,8 @@ class DQN:
     def _update_target_network(self):
         '''update target network by copying from behavior network'''
         ## TODO ##
-        raise NotImplementedError
+        self._target_net.load_state_dict(self._behavior_net.state_dict())
+        # raise NotImplementedError
 
     def save(self, model_path, checkpoint=False):
         if checkpoint:
@@ -174,9 +191,23 @@ def test(args, env, agent, writer):
         env.seed(seed)
         state = env.reset()
         ## TODO ##
+        for t in itertools.count(start=1):
+            if args.render:
+                env.render()
+            # select action
+            action = agent.select_action(state, epsilon, action_space)
+
+            # execute action
+            next_state, reward, done, _ = env.step(action)
+
+            state = next_state
+            total_reward += reward
         # ...
-        #     if done:
-        #         writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
+            if done:
+                writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
+                rewards.append(total_reward)
+                print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
+                break
         #         ...
         raise NotImplementedError
     print('Average Reward', np.mean(rewards))
@@ -186,9 +217,9 @@ def test(args, env, agent, writer):
 def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('-d', '--device', default='cuda')
+    parser.add_argument('-d', '--device', default='cpu')
     parser.add_argument('-m', '--model', default='dqn.pth')
-    parser.add_argument('--logdir', default='log/dqn')
+    parser.add_argument('--logdir', default='./lab6/dqn')
     # train
     parser.add_argument('--warmup', default=10000, type=int)
     parser.add_argument('--episode', default=1200, type=int)
