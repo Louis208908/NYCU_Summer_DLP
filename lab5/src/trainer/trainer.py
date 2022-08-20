@@ -108,8 +108,8 @@ class Trainer:
 					generator_label = torch.ones(batch_size).to(self.device)
 					dis_output, aux_output = self.models.discriminator(fake_img)
 					dis_errG = self.dis_criterion(dis_output, generator_label)
-					# aux_errG = self.aux_criterion(aux_output, aux_label)
-					aux_errG = nn.CrossEntropyLoss()(aux_output, aux_label)
+					aux_errG = self.aux_criterion(aux_output, aux_label)
+					# aux_errG = nn.CrossEntropyLoss()(aux_output, aux_label)
 					errG = dis_errG + self.args.aux_weight * aux_errG
 					errG.backward()
 					self.models.optimG.step()
@@ -133,7 +133,7 @@ class Trainer:
 					if acc > best_acc:
 						print("get a better accuracy: {}".format(acc))
 						best_acc = acc
-						if acc > 50:
+						if acc*100.0 > 50:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 		self.log_writer.close()
