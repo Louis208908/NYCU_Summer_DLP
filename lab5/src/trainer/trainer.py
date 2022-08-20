@@ -133,6 +133,9 @@ class Trainer:
 					self.log_writer.write(("epoch[{}]:, acc:{}\n".format(epoch, acc)))
 					if acc > best_acc:
 						print("get a better accuracy: {}".format(acc))
+						self.args.aux_weight -= (self.args.aux_weight * 0.1)
+						if self.args.aux_weight < 1:
+							self.args.aux_weight = 1;
 						best_acc = acc
 						if acc > 50:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
@@ -146,15 +149,15 @@ class Trainer:
 					print("epoch[{}], new_accuracy: {}".format(epoch,new_acc))
 					self.log_writer.write(("epoch[{}]:, new_acc:{}\n".format(epoch, new_acc)))
 					if new_acc > new_best_acc:
+						self.args.aux_weight -= (self.args.aux_weight * 0.1)
+						if self.args.aux_weight < 1:
+							self.args.aux_weight = 1;
 						print("get a better new_accuracy: {}".format(new_acc))
 						new_best_acc = new_acc
 						if new_acc > 50:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/new_generator_{}.pth".format(new_acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/new_discriminator_{}.pth".format(new_acc))
-				if acc > 60 or new_acc > 60:
-					self.args.aux_weight -= (self.args.aux_weight * 0.1)
-					if self.args.aux_weight < 1:
-						self.args.aux_weight = 1;
+				# if acc > 60 or new_acc > 60:
 		self.log_writer.close()
 		return best_acc,new_best_acc
 
