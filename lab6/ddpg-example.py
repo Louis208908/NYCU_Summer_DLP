@@ -95,8 +95,8 @@ class DDPG:
         self._target_actor_net.load_state_dict(self._actor_net.state_dict())
         self._target_critic_net.load_state_dict(self._critic_net.state_dict())
         ## TODO ##
-        self._actor_opt = torch.optim.Adam(self._actor_net.parameters(), lr=args.lr_a)
-        self._critic_opt = torch.optim.Adam(self._critic_net.parameters(), lr=args.lr_c)
+        self._actor_opt = torch.optim.Adam(self._actor_net.parameters(), lr=args.lr)
+        self._critic_opt = torch.optim.Adam(self._critic_net.parameters(), lr=args.lr)
         # raise NotImplementedError
         # action noise
         self._action_noise = GaussianNoise(dim=2)
@@ -280,7 +280,7 @@ def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-d', '--device', default='cuda')
-    parser.add_argument('-m', '--model', default='ddpg.pth')
+    parser.add_argument('-m', '--model', default='./lab6/ddpg/ddpg.pth')
     parser.add_argument('--logdir', default='./lab6/ddpg')
     # train
     parser.add_argument('--warmup', default=10000, type=int)

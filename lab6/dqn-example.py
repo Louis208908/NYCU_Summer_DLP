@@ -76,11 +76,11 @@ class DQN:
     def select_action(self, state, epsilon, action_space):
         '''epsilon-greedy based on behavior network'''
          ## TODO ##
-        if random.random() < epsilon:
+        if random.random() <= epsilon:
             return action_space.sample()
         else:
             with torch.no_grad():
-                status_quo = torch.from_numpy(state).float().to(self.device)
+                status_quo = torch.from_numpy(state).to(self.device)
                 action = self._behavior_net(status_quo)
                 return action.argmax().item()
         # raise NotImplementedError
@@ -98,12 +98,13 @@ class DQN:
     def _update_behavior_network(self, gamma):
         # sample a minibatch of transitions
         state, action, reward, next_state, done = self._memory.sample(
-            self.batch_size, self.device)
+            self.batch_size, self.device
+        )
 
         ## TODO ##
-        q_value = torch.gather(self._behavior_net(state), 1, action)
+        q_value = torch.gather(self._behavior_net(state), dim=1, index=action.long())
         with torch.no_grad():
-           q_next = torch.max(self._target_net(next_state), dim=1)[0].unsqueeze(1)
+           q_next = torch.max(self._target_net(next_state), dim=1)[0].unsqueeze(dim=1)
            q_target = reward + gamma * q_next * (1 - done)
         criterion = nn.MSELoss()
         loss = criterion(q_value, q_target)
@@ -205,8 +206,8 @@ def test(args, env, agent, writer):
         # ...
             if done:
                 writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
-                rewards.append(total_reward)
                 print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
+                rewards.append(total_reward)
                 break
         #         ...
         raise NotImplementedError
@@ -218,7 +219,7 @@ def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-d', '--device', default='cpu')
-    parser.add_argument('-m', '--model', default='dqn.pth')
+    parser.add_argument('-m', '--model', default='./lab6/dqn/dqn.pth')
     parser.add_argument('--logdir', default='./lab6/dqn')
     # train
     parser.add_argument('--warmup', default=10000, type=int)
