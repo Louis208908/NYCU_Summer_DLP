@@ -127,13 +127,13 @@ class Trainer:
 					batch_size = cond.shape[0]
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, cond)
-					acc = self.evaluator.module.evaluate(fake_img, cond)
+					acc = self.evaluator.module.evaluate(fake_img, cond) * 100.0
 					print("epoch[{}], accuracy: {}".format(epoch,acc))
 					self.log_writer.write(("epoch[{}]:, acc:{}\n".format(epoch, acc)))
 					if acc > best_acc:
 						print("get a better accuracy: {}".format(acc))
 						best_acc = acc
-						if acc*100.0 > 50:
+						if acc > 50:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 		self.log_writer.close()
