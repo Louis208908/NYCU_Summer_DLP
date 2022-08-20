@@ -112,10 +112,6 @@ class Trainer:
 					aux_errG = self.aux_criterion(aux_output, aux_label)
 					# aux_errG = nn.CrossEntropyLoss()(aux_output, aux_label)
 					errG = dis_errG + self.args.aux_weight * aux_errG
-					if best_acc > 50:
-						self.aux_weight -= (self.aux_weight * 0.1)
-						if self.aux_weight < 1:
-							self.aux_weight = 1;
 					errG.backward()
 					self.models.optimG.step()
 
@@ -147,14 +143,18 @@ class Trainer:
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, cond)
 					new_acc  = self.evaluator.module.evaluate(fake_img, cond) * 100.0
-					print("epoch[{}], accuracy: {}".format(epoch,new_acc))
+					print("epoch[{}], new_accuracy: {}".format(epoch,new_acc))
 					self.log_writer.write(("epoch[{}]:, new_acc:{}\n".format(epoch, new_acc)))
 					if new_acc > new_best_acc:
-						print("get a better accuracy: {}".format(new_acc))
+						print("get a better new_accuracy: {}".format(new_acc))
 						new_best_acc = new_acc
 						if new_acc > 50:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/new_generator_{}.pth".format(new_acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/new_discriminator_{}.pth".format(new_acc))
+				if acc > 50 or new_acc > 50:
+					self.aux_weight -= (self.aux_weight * 0.1)
+					if self.aux_weight < 1:
+						self.aux_weight = 1;
 		self.log_writer.close()
 		return best_acc,new_best_acc
 
