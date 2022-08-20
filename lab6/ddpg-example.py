@@ -39,6 +39,8 @@ class ReplayMemory:
     def sample(self, batch_size, device):
         '''sample a batch of transition tensors'''
         ## TODO ##
+        transitions = random.sample(self.buffer,batch_size)
+        return (torch.tensor(x, dtype=torch.float, device=device) for x in zip(*transitions))
         raise NotImplementedError
 
 
@@ -46,10 +48,19 @@ class ActorNet(nn.Module):
     def __init__(self, state_dim=8, action_dim=2, hidden_dim=(400, 300)):
         super().__init__()
         ## TODO ##
-        raise NotImplementedError
+        self.net = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim[0]),
+            nn.ReLU(),
+            nn.Linear(hidden_dim[0], hidden_dim[1]),
+            nn.ReLU(),
+            nn.Linear(hidden_dim[1], action_dim),
+            nn.Tanh()
+        )
+        # raise NotImplementedError
 
     def forward(self, x):
         ## TODO ##
+        return self.net(x)
         raise NotImplementedError
 
 
@@ -84,9 +95,9 @@ class DDPG:
         self._target_actor_net.load_state_dict(self._actor_net.state_dict())
         self._target_critic_net.load_state_dict(self._critic_net.state_dict())
         ## TODO ##
-        # self._actor_opt = ?
-        # self._critic_opt = ?
-        raise NotImplementedError
+        self._actor_opt = torch.optim.Adam(self._actor_net.parameters(), lr=args.lr_a)
+        self._critic_opt = torch.optim.Adam(self._critic_net.parameters(), lr=args.lr_c)
+        # raise NotImplementedError
         # action noise
         self._action_noise = GaussianNoise(dim=2)
         # memory
@@ -101,6 +112,14 @@ class DDPG:
     def select_action(self, state, noise=True):
         '''based on the behavior (actor) network and exploration noise'''
         ## TODO ##
+        if noise:
+            action_noise = self._action_noise.sample()
+        else:
+            action_noise = np.zeros(self._action_noise.sample().shape)
+        with torch.no_grad():
+            now_state = torch.from_numpy(state).to(self.device)
+            action = self._actor_net(now_state) + action_noise
+        return action.cpu().numpy()
         raise NotImplementedError
 
     def append(self, state, action, reward, next_state, done):
@@ -127,14 +146,14 @@ class DDPG:
         ## update critic ##
         # critic loss
         ## TODO ##
-        # q_value = ?
-        # with torch.no_grad():
-        #    a_next = ?
-        #    q_next = ?
-        #    q_target = ?
-        # criterion = ?
-        # critic_loss = criterion(q_value, q_target)
-        raise NotImplementedError
+        q_value = self._critic_net(state, action)
+        with torch.no_grad():
+           a_next = self._target_actor_net(next_state)
+           q_next = self._target_critic_net(next_state, a_next)
+           q_target = reward + gamma * q_next * (1 - done)
+        criterion = nn.MMSELoss()
+        critic_loss = criterion(q_value, q_target)
+        # raise NotImplementedError
         # optimize critic
         actor_net.zero_grad()
         critic_net.zero_grad()
@@ -144,9 +163,9 @@ class DDPG:
         ## update actor ##
         # actor loss
         ## TODO ##
-        # action = ?
-        # actor_loss = ?
-        raise NotImplementedError
+        action = self._actor_net(state)
+        actor_loss = self._critic_net(state, action)
+        # raise NotImplementedError
         # optimize actor
         actor_net.zero_grad()
         critic_net.zero_grad()
