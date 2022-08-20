@@ -111,6 +111,10 @@ class Trainer:
 					aux_errG = self.aux_criterion(aux_output, aux_label)
 					# aux_errG = nn.CrossEntropyLoss()(aux_output, aux_label)
 					errG = dis_errG + self.args.aux_weight * aux_errG
+					if best_acc > 60:
+						self.aux_weight -= (self.aux_weight * 0.1)
+						if self.aux_weight < 1:
+							self.aux_weight = 1;
 					errG.backward()
 					self.models.optimG.step()
 
