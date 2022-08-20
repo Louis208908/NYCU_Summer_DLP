@@ -151,7 +151,7 @@ class Trainer:
 						if new_acc > 50:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/new_generator_{}.pth".format(new_acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/new_discriminator_{}.pth".format(new_acc))
-				if acc > 50 or new_acc > 50:
+				if acc > 60 or new_acc > 60:
 					self.args.aux_weight -= (self.args.aux_weight * 0.1)
 					if self.args.aux_weight < 1:
 						self.args.aux_weight = 1;
