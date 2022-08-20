@@ -99,7 +99,7 @@ def main(args):
 	trainer = build_trainer(args, device, models)
 
 	if args.train:
-		print("best acc ever = {}".format(trainer.train(train_loader, test_loader, new_test_loader)))
+		print("best acc ever = {}, new best acc ever = {}".format(trainer.train(train_loader, test_loader, new_test_loader)))
 	elif args.test:
 		trainer.test(test_loader)
 

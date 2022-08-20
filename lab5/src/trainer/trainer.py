@@ -156,7 +156,7 @@ class Trainer:
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/new_generator_{}.pth".format(new_acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/new_discriminator_{}.pth".format(new_acc))
 		self.log_writer.close()
-		return best_acc
+		return best_acc,new_best_acc
 
 	def train_dcgan(self, train_loader, test_loader):
 		"""Training loops for dcgan"""
