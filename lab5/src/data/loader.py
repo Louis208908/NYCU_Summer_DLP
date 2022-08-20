@@ -15,6 +15,7 @@ def get_dataloader(args, device):
 
 	train_dataset = iclevrDataset(args, device, "train")
 	test_dataset  = iclevrDataset(args, device, "test")
+	new_test_dataset  = iclevrDataset(args, device, "new_test")
 
 	print("# training samples: {}".format(len(train_dataset)))
 	print("# testing  samples: {}".format(len(test_dataset)))
@@ -34,7 +35,17 @@ def get_dataloader(args, device):
 		pin_memory=True
 	)
 
+	new_test_loader = DataLoader_pro(
+		new_test_dataset, 
+		num_workers=args.num_workers, 
+		batch_size=args.batch_size, 
+		shuffle=False,
+		pin_memory=True
+	)
+
+
+
 	# train_loader = nn.DataParallel(train_loader)
 	# test_loader = nn.DataParallel(test_loader)
 
-	return train_loader, test_loader
+	return train_loader, test_loader, new_test_loader

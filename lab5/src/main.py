@@ -85,7 +85,7 @@ def main(args):
 	##################
 	## Load dataset ##
 	##################
-	train_loader, test_loader = get_dataloader(args, device)
+	train_loader, test_loader, new_test_loader = get_dataloader(args, device)
 	
 
 	##################
@@ -99,7 +99,7 @@ def main(args):
 	trainer = build_trainer(args, device, models)
 
 	if args.train:
-		print("best acc ever = {}".format(trainer.train(train_loader, test_loader)))
+		print("best acc ever = {}".format(trainer.train(train_loader, test_loader, new_test_loader)))
 	elif args.test:
 		trainer.test(test_loader)
 

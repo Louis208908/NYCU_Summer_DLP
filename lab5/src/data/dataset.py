@@ -21,7 +21,9 @@ class iclevrDataset(Dataset):
 			data_dict = json.load(open("{}/train.json".format(self.data_root)))
 			self.data_list = list(data_dict.items())
 		elif self.mode == "test":
-			self.data_list = json.load(open("{}/{}".format(self.data_root, self.args.test_file)))
+			self.data_list = json.load(open("{}/{}".format(self.data_root, "test.json")))
+		elif self.mode == "new_test":
+			self.data_list = json.load(open("{}/{}".format(self.data_root, "new_test.json")))
 		self.transforms = transforms.Compose([
 			transforms.Resize(self.args.input_dim), 
 			transforms.CenterCrop(self.args.input_dim),
@@ -46,7 +48,7 @@ class iclevrDataset(Dataset):
 				cond_onehot[cond_idx] = 1
 
 			return img_tensor, cond_onehot
-		elif self.mode == "test":
+		elif self.mode == "test" or self.mode == "new_test":
 			## Condition
 			cond_onehot = torch.zeros(len(list(self.object_idx.keys())))
 			for object_type in self.data_list[index]:
