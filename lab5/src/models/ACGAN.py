@@ -37,6 +37,9 @@ class ACGAN:
         elif self.args.optimizer == "adamw":
             self.optimG = optim.AdamW(self.generator.parameters(), lr=args.lr_G, betas=(args.beta1, args.beta2))
             self.optimD = optim.AdamW(self.discriminator.parameters(), lr=args.lr_D, betas=(args.beta1, args.beta2))
+        
+        ## using sgd as optimizer for discriminator
+        self.optimD = optim.SGD(self.discriminator.parameters(), lr=args.lr_D, momentum=args.momentum)
 
 
 
