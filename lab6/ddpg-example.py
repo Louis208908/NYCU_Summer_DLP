@@ -166,7 +166,7 @@ class DDPG:
         # actor loss
         ## TODO ##
         action = self._actor_net(state)
-        actor_loss = self._critic_net(state, action)
+        actor_loss = -self._critic_net(state, action).mean()
         # raise NotImplementedError
         # optimize actor
         actor_net.zero_grad()
