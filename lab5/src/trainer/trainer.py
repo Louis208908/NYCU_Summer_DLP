@@ -267,7 +267,7 @@ class Trainer:
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, cond)
 					new_acc = self.evaluator.module.evaluate(fake_img, cond) * 100.0
-					print("accuracy: {}".format(new_acc))
+					print("new_accuracy: {}".format(new_acc))
 					if new_acc > new_best_acc:
 						print("get a better new accuracy: {}".format(new_acc))
 						new_best_acc = new_acc
