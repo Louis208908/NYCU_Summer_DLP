@@ -255,8 +255,8 @@ def test(args, env, agent, writer):
     rewards = []
     for n_episode, seed in enumerate(seeds):
         total_reward = 0
-        env.seed(seed)
-        state = env.reset(seed)
+        # env.seed(seed)
+        state = env.reset(seed = seed)
         ## TODO ##
         for t in itertools.cound(start=1):
             if args.render:
