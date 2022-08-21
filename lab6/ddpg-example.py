@@ -95,8 +95,8 @@ class DDPG:
         self._target_actor_net.load_state_dict(self._actor_net.state_dict())
         self._target_critic_net.load_state_dict(self._critic_net.state_dict())
         ## TODO ##
-        self._actor_opt = torch.optim.Adam(self._actor_net.parameters(), lr=args.lr)
-        self._critic_opt = torch.optim.Adam(self._critic_net.parameters(), lr=args.lr)
+        self._actor_opt = torch.optim.Adam(self._actor_net.parameters(), lr=args.lra)
+        self._critic_opt = torch.optim.Adam(self._critic_net.parameters(), lr=args.lrc)
         # raise NotImplementedError
         # action noise
         self._action_noise = GaussianNoise(dim=2)
