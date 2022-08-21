@@ -237,10 +237,10 @@ def train(args, env, agent, writer):
             total_steps += 1
             if done:
                 ewma_reward = 0.05 * total_reward + (1 - 0.05) * ewma_reward
-                writer.add_scalar('Train/Episode Reward', total_reward,
-                                  total_steps)
-                writer.add_scalar('Train/Ewma Reward', ewma_reward,
-                                  total_steps)
+                # writer.add_scalar('Train/Episode Reward', total_reward,
+                #                   total_steps)
+                # writer.add_scalar('Train/Ewma Reward', ewma_reward,
+                #                   total_steps)
                 print(
                     'Step: {}\tEpisode: {}\tLength: {:3d}\tTotal reward: {:.2f}\tEwma reward: {:.2f}'
                     .format(total_steps, episode, t, total_reward,
@@ -270,7 +270,7 @@ def test(args, env, agent, writer):
 
         # ...
             if done:
-                writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
+                # writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
                 rewards.append(total_reward)
         #         ...
         # raise NotImplementedError
