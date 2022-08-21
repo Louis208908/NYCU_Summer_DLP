@@ -250,24 +250,25 @@ class Trainer:
 
 		with torch.no_grad():
 			while 1:
-				for cond in tqdm(test_loader):
+				for cond in tqdm(test_loader, disable=True):
 					cond = cond.to(self.device)
 					batch_size = cond.shape[0]
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, cond)
 					acc = self.evaluator.module.evaluate(fake_img, cond) * 100.0
-					print("accuracy: {}".format(acc))
+					
+					# print("accuracy: {}".format(acc))
 					if acc > best_acc:
 						print("get a better accuracy: {}".format(acc))
 						best_acc = acc
 						best_prediction = fake_img
-				for cond in tqdm(new_test_loader):
+				for cond in tqdm(new_test_loader, disable=True):
 					cond = cond.to(self.device)
 					batch_size = cond.shape[0]
 					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
 					fake_img = self.models.generator(noise, cond)
 					new_acc = self.evaluator.module.evaluate(fake_img, cond) * 100.0
-					print("new_accuracy: {}".format(new_acc))
+					# print("new_accuracy: {}".format(new_acc))
 					if new_acc > new_best_acc:
 						print("get a better new accuracy: {}".format(new_acc))
 						new_best_acc = new_acc
