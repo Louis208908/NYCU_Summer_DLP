@@ -57,6 +57,12 @@ class DQN:
     def __init__(self, args):
         self._behavior_net = Net().to(args.device)
         self._target_net = Net().to(args.device)
+        '''
+        behavior network is the network that is used to choose actions
+        target network is the network that is used to predict q values
+        '''
+
+
         # initialize target network
         self._target_net.load_state_dict(self._behavior_net.state_dict())
         ## TODO ##
@@ -100,9 +106,12 @@ class DQN:
         state, action, reward, next_state, done = self._memory.sample(self.batch_size, self.device)
 
         ## TODO ##
+        # get q values of some randomly picked actions
         q_value = torch.gather(self._behavior_net(state), dim=1, index=action.long())
         with torch.no_grad():
+           # predict q value of next state
            q_next = torch.max(self._target_net(next_state), dim=1)[0].unsqueeze(dim=1)
+           # compute q value of next state with done flag
            q_target = reward + gamma * q_next * (1 - done)
         criterion = nn.MSELoss()
         loss = criterion(q_value, q_target)
@@ -110,6 +119,8 @@ class DQN:
         # optimize
         self._optimizer.zero_grad()
         loss.backward()
+        # use gradient clipping to avoid gradient explosion
+        # loss where gradient is too large will be clipped to a maximum value(5)
         nn.utils.clip_grad_norm_(self._behavior_net.parameters(), 5)
         self._optimizer.step()
 
@@ -166,6 +177,7 @@ def train(args, env, agent, writer):
             total_reward += reward
             total_steps += 1
             if done:
+                #ewma = Exponentially Weighted Moving-Average
                 ewma_reward = 0.05 * total_reward + (1 - 0.05) * ewma_reward
                 writer.add_scalar('Train/Episode Reward', total_reward,
                                   total_steps)
