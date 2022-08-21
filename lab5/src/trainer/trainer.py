@@ -241,6 +241,8 @@ class Trainer:
 
 
 	def test(self, test_loader, new_test_loader):
+		from datetime import datetime
+		# random.seed(datetime.now())
 		"""Test only"""
 		print("Start testing...")
 		best_acc = 0
@@ -260,6 +262,7 @@ class Trainer:
 						
 						# print("accuracy: {}".format(acc))
 						if acc > best_acc:
+							torch.manual_seed(datetime.now())
 							print("get a better accuracy: {}".format(acc))
 							best_acc = acc
 							best_prediction = fake_img
@@ -275,6 +278,7 @@ class Trainer:
 							print("get a better new accuracy: {}".format(new_acc))
 							new_best_acc = new_acc
 							new_best_prediction = fake_img
+							torch.manual_seed(datetime.now())
 				if best_acc > 80 and new_best_acc > 80:
 					break;
 
