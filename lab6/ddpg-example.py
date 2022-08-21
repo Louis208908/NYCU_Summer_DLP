@@ -258,7 +258,7 @@ def test(args, env, agent, writer):
         # env.seed(seed)
         state = env.reset(seed = seed)
         ## TODO ##
-        for t in itertools.cound(start=1):
+        for t in itertools.count(start=1):
             if args.render:
                 env.render()
 

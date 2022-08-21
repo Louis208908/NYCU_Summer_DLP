@@ -30,8 +30,7 @@ class ReplayMemory:
     def sample(self, batch_size, device):
         '''sample a batch of transition tensors'''
         transitions = random.sample(self.buffer, batch_size)
-        return (torch.tensor(x, dtype=torch.float, device=device)
-                for x in zip(*transitions))
+        return (torch.tensor(x, dtype=torch.float, device=device) for x in zip(*transitions))
 
 
 class Net(nn.Module):
@@ -76,6 +75,8 @@ class DQN:
     def select_action(self, state, epsilon, action_space):
         '''epsilon-greedy based on behavior network'''
          ## TODO ##
+
+        # randomly act in the environment with probability epsilon
         if random.random() <= epsilon:
             return action_space.sample()
         else:
@@ -86,8 +87,7 @@ class DQN:
         # raise NotImplementedError
 
     def append(self, state, action, reward, next_state, done):
-        self._memory.append(state, [action], [reward / 10], next_state,
-                            [int(done)])
+        self._memory.append(state, [action], [reward / 10], next_state,[int(done)])
 
     def update(self, total_steps):
         if total_steps % self.freq == 0:
@@ -97,9 +97,7 @@ class DQN:
 
     def _update_behavior_network(self, gamma):
         # sample a minibatch of transitions
-        state, action, reward, next_state, done = self._memory.sample(
-            self.batch_size, self.device
-        )
+        state, action, reward, next_state, done = self._memory.sample(self.batch_size, self.device)
 
         ## TODO ##
         q_value = torch.gather(self._behavior_net(state), dim=1, index=action.long())
