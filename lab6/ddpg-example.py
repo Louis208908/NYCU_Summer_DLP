@@ -40,7 +40,8 @@ class ReplayMemory:
         '''sample a batch of transition tensors'''
         ## TODO ##
         transitions = random.sample(self.buffer,batch_size)
-        return (torch.tensor(x, dtype=torch.float, device=device) for x in zip(*transitions))
+        return (torch.tensor(x, dtype=torch.float, device=device) 
+                for x in zip(*transitions))
         raise NotImplementedError
 
 
@@ -85,13 +86,13 @@ class CriticNet(nn.Module):
 
 class DDPG:
     def __init__(self, args):
-        # behavior network
+        ## behavior network
         self._actor_net = ActorNet().to(args.device)
         self._critic_net = CriticNet().to(args.device)
-        # target network
+        ## target network
         self._target_actor_net = ActorNet().to(args.device)
         self._target_critic_net = CriticNet().to(args.device)
-        # initialize target network
+        ## initialize target network
         self._target_actor_net.load_state_dict(self._actor_net.state_dict())
         self._target_critic_net.load_state_dict(self._critic_net.state_dict())
         ## TODO ##
@@ -116,6 +117,7 @@ class DDPG:
             action_noise = self._action_noise.sample()
         else:
             action_noise = np.zeros(self._action_noise.sample().shape)
+        action_noise = torch.from_numpy(action_noise).to(self.device)
         with torch.no_grad():
             now_state = torch.from_numpy(state).to(self.device)
             action = self._actor_net(now_state) + action_noise
