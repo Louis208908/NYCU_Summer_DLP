@@ -151,7 +151,7 @@ class DDPG:
            a_next = self._target_actor_net(next_state)
            q_next = self._target_critic_net(next_state, a_next)
            q_target = reward + gamma * q_next * (1 - done)
-        criterion = nn.MMSELoss()
+        criterion = nn.MSELoss()
         critic_loss = criterion(q_value, q_target)
         # raise NotImplementedError
         # optimize critic
@@ -279,7 +279,7 @@ def test(args, env, agent, writer):
 def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('-d', '--device', default='cuda')
+    parser.add_argument('-d', '--device', default='cpu')
     parser.add_argument('-m', '--model', default='./lab6/ddpg/ddpg.pth')
     parser.add_argument('--logdir', default='./lab6/ddpg')
     # train
