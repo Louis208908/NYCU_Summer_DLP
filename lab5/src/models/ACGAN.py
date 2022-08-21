@@ -39,7 +39,7 @@ class ACGAN:
             self.optimD = optim.AdamW(self.discriminator.parameters(), lr=args.lr_D, betas=(args.beta1, args.beta2))
         
         ## using sgd as optimizer for discriminator
-        self.optimD = optim.SGD(self.discriminator.parameters(), lr=args.lr_D, momentum=args.momentum)
+        self.optimD = optim.SGD(self.discriminator.parameters(), lr=args.lr_D, momentum=0.9)
 
 
 
