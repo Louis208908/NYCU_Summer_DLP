@@ -253,6 +253,8 @@ class Trainer:
 
 		with torch.no_grad():
 			while 1:
+				if iters % 100 == 0:
+					print(iters)
 				if best_acc < 80:
 					for cond in tqdm(test_loader, disable=True):
 						cond = cond.to(self.device)
