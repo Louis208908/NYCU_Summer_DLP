@@ -267,6 +267,10 @@ class Trainer:
 							print("get a better accuracy: {}".format(acc))
 							best_acc = acc
 							best_prediction = fake_img
+							iters = 0
+						elif iters % 100 == 0:
+							torch.manual_seed(iters)
+							
 				if new_best_acc < 80:
 					for cond in tqdm(new_test_loader, disable=True):
 						cond = cond.to(self.device)
@@ -279,6 +283,9 @@ class Trainer:
 							print("get a better new accuracy: {}".format(new_acc))
 							new_best_acc = new_acc
 							new_best_prediction = fake_img
+							torch.manual_seed(iters)
+							iters = 0
+						elif iters % 100 == 0:
 							torch.manual_seed(iters)
 				iters += 1
 				if best_acc > 80 and new_best_acc > 80:
