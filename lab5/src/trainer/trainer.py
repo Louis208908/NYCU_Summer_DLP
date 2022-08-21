@@ -268,7 +268,7 @@ class Trainer:
 							best_acc = acc
 							best_prediction = fake_img
 							iters = 0
-						elif iters % 100 == 0:
+						elif iters % 10000 == 0:
 							print("stock too many times, change a seed")
 							torch.manual_seed(iters)
 							
@@ -286,7 +286,7 @@ class Trainer:
 							new_best_prediction = fake_img
 							torch.manual_seed(iters)
 							iters = 0
-						elif iters % 100 == 0:
+						elif iters % 10000 == 0:
 							print("stock too many times, change a seed")
 							torch.manual_seed(iters)
 				iters += 1
