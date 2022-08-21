@@ -135,9 +135,9 @@ class Trainer:
 						print("get a better accuracy: {}".format(acc))
 						best_acc = acc
 						if acc > 50:
-							self.args.aux_weight -= (self.args.aux_weight * 0.1)
-							if self.args.aux_weight < 1:
-								self.args.aux_weight = 1;
+							# self.args.aux_weight -= (self.args.aux_weight * 0.1)
+							# if self.args.aux_weight < 1:
+							# 	self.args.aux_weight = 1;
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/generator_{}.pth".format(acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/discriminator_{}.pth".format(acc))
 				for cond in tqdm(new_test_loader):
@@ -152,13 +152,13 @@ class Trainer:
 						print("get a better new_accuracy: {}".format(new_acc))
 						new_best_acc = new_acc
 						if new_acc > 50:
-							self.args.aux_weight -= (self.args.aux_weight * 0.1)
-							if self.args.aux_weight < 1:
-								self.args.aux_weight = 1;
+							# self.args.aux_weight -= (self.args.aux_weight * 0.1)
+							# if self.args.aux_weight < 1:
+							# 	self.args.aux_weight = 1;
 							torch.save(self.models.generator.state_dict(), self.args.log_dir + "/new_generator_{}.pth".format(new_acc))
 							torch.save(self.models.discriminator.state_dict(), self.args.log_dir + "/new_discriminator_{}.pth".format(new_acc))
-				if best_acc - acc > 10 or new_best_acc - new_acc > 10:
-					self.args.aux_weight /= 0.9
+				# if best_acc - acc > 10 or new_best_acc - new_acc > 10:
+				# 	self.args.aux_weight /= 0.9
 		self.log_writer.close()
 		return best_acc,new_best_acc
 
