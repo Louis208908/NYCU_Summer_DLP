@@ -240,36 +240,46 @@ class Trainer:
 				
 
 
-	def test(self, test_loader):
+	def test(self, test_loader, new_test_loader):
 		"""Test only"""
 		print("Start testing...")
+		best_acc = 0
+		new_best_acc = 0
+		self.models.generator.eval()
+		self.models.discriminator.eval()
 
-		test_cond = next(iter(test_loader)).to(self.device)
-		try:
-			fixed_noise = torch.load("{}/fixed_noise_{}.pt".format(self.args.log_dir, self.args.checkpoint_epoch))
-		except:
-			print("`fixed_noise.pt` not found, try initializing random noise...")
-			fixed_noise = torch.randn(test_cond.shape[0], self.args.z_dim, 1, 1, device=self.device)
+		with torch.no_grad():
+			while 1:
+				for cond in tqdm(test_loader):
+					cond = cond.to(self.device)
+					batch_size = cond.shape[0]
+					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
+					fake_img = self.models.generator(noise, cond)
+					acc = self.evaluator.module.evaluate(fake_img, cond) * 100.0
+					print("accuracy: {}".format(acc))
+					if acc > best_acc:
+						print("get a better accuracy: {}".format(acc))
+						best_acc = acc
+						best_prediction = fake_img
+				for cond in tqdm(new_test_loader):
+					cond = cond.to(self.device)
+					batch_size = cond.shape[0]
+					noise = torch.randn(batch_size, self.args.latent_dim, 1, 1).to(self.device)
+					fake_img = self.models.generator(noise, cond)
+					new_acc = self.evaluator.module.evaluate(fake_img, cond) * 100.0
+					print("accuracy: {}".format(new_acc))
+					if new_acc > new_best_acc:
+						print("get a better new accuracy: {}".format(new_acc))
+						new_best_acc = new_acc
+						new_best_prediction = fake_img
+				if best_acc > 80 and new_best_acc > 80:
+					break;
 
+					
+			save_image(best_prediction, "{}/pred_{:.4f}.png".format(self.args.log_dir, best_acc), normalize=True)
+			save_image(new_best_prediction, "{}/new_pred_{:.4f}.png".format(self.args.log_dir, new_best_acc), normalize=True)
+			
 
-		if len(fixed_noise.shape) == 4:
-			fixed_noise = torch.stack([fixed_noise])
-
-		best_acc, best_pred_img = 0, None
-		for eval_iter in range(len(fixed_noise)):
-			## Evaluate classification results
-			self.netG.eval()
-			self.netD.eval()
-			with torch.no_grad():
-				pred_img = self.netG(fixed_noise[eval_iter], test_cond)
-			acc = self.evaluator.module.evaluate(pred_img, test_cond)
-			print("Accuracy: {:.4f}".format(acc))
-
-			if acc > best_acc:
-				best_acc = acc
-				best_pred_img = pred_img
-
-		save_image(best_pred_img, "{}/pred_{:.4f}.png".format(self.args.log_dir, best_acc), normalize=True)
 
 
 

@@ -70,7 +70,7 @@ def main(args):
 	## Set device
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	print("Device: ", device)
-
+	
 	#創建一個timestr，獲取當前時間，然後加上一個-，讓時間可以被分割
 	timestr = time.strftime("%Y%m%d-%H%M%S")
 	args.log_dir = "{}/{}_{}/".format(args.log_dir, timestr, args.gan_type)
@@ -79,7 +79,7 @@ def main(args):
 	if args.train:
 		os.makedirs("{}".format(args.log_dir), exist_ok=True)
 	elif args.test:
-		if not os.path.isdir("{}/{}".format(args.model_dir, args.exp_name)):
+		if not os.path.isdir(""):
 			raise ValueError("Model checkpoints directory does not exist!")
 
 	##################
@@ -101,7 +101,7 @@ def main(args):
 	if args.train:
 		print("best acc ever = {}, new best acc ever = {}".format(trainer.train(train_loader, test_loader, new_test_loader)))
 	elif args.test:
-		trainer.test(test_loader)
+		trainer.test(test_loader,new_test_loader)
 
 if __name__ == "__main__":
 	args = parse_args()
