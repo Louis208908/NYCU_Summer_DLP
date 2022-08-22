@@ -224,7 +224,7 @@ def train(args, env, agent, writer):
             if total_steps < args.warmup:
                 action = env.action_space.sample()
             else:
-                action = agent.select_action(state)
+                action = agent.select_action(state,noise = False)
             # execute action
             next_state, reward, done, _ = env.step(action)
             # store transition
