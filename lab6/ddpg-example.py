@@ -272,6 +272,7 @@ def test(args, env, agent, writer):
             if done:
                 # writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
                 rewards.append(total_reward)
+                break;
         #         ...
         # raise NotImplementedError
     print('Average Reward', np.mean(rewards))
