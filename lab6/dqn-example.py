@@ -228,7 +228,7 @@ def test(args, env, agent, writer):
 def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('-d', '--device', default='cpu')
+    parser.add_argument('-d', '--device', default='gpu')
     parser.add_argument('-m', '--model', default='./lab6/dqn/dqn.pth')
     parser.add_argument('--logdir', default='./lab6/dqn')
     # train
