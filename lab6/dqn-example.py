@@ -67,7 +67,10 @@ class DQN:
         # initialize target network
         self._target_net.load_state_dict(self._behavior_net.state_dict())
         ## TODO ##
+        self._behavior_net = nn.DataParallel(self._behavior_net)
+        self._target_net = nn.DataParallel(self._target_net)
         self._optimizer = torch.optim.Adam(self._behavior_net.parameters(),args.lr)
+        self._optimizer = nn.DataParallel(self._optimizer).module
         # raise NotImplementedError
         # memory
         self._memory = ReplayMemory(capacity=args.capacity)
