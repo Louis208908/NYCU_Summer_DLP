@@ -24,8 +24,8 @@ class ACGAN:
             self.generator.apply(weights_init)
             self.discriminator.apply(weights_init)
         elif args.test:
-            self.generator.load_state_dict(torch.load('./checkpoints/netG.pth'))
-            self.discriminator.load_state_dict(torch.load('./checkpoints/netD.pth'))
+            self.generator.load_state_dict(torch.load('./checkpoints_2/new_netG.pth'))
+            self.discriminator.load_state_dict(torch.load('./checkpoints_2/new_netD.pth'))
 
         self.generator = nn.DataParallel(self.generator)
         self.discriminator = nn.DataParallel(self.discriminator)

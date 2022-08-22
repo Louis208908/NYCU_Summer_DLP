@@ -79,7 +79,7 @@ def main(args):
 	if args.train:
 		os.makedirs("{}".format(args.log_dir), exist_ok=True)
 	elif args.test:
-		if not os.path.isdir("./checkpoints"):
+		if not os.path.isdir("./checkpoints_2"):
 			raise ValueError("Model checkpoints directory does not exist!")
 		args.log_dir += "test/"
 		os.makedirs("{}".format(args.log_dir), exist_ok=True)
