@@ -55,6 +55,7 @@ class Net(nn.Module):
 
 class DQN:
     def __init__(self, args):
+        
         self._behavior_net = Net().to(args.device)
         self._target_net = Net().to(args.device)
         '''
@@ -228,7 +229,7 @@ def test(args, env, agent, writer):
 def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('-d', '--device', default='gpu')
+    parser.add_argument('-d', '--device', default='cuda')
     parser.add_argument('-m', '--model', default='./lab6/dqn/dqn.pth')
     parser.add_argument('--logdir', default='./lab6/dqn')
     # train
