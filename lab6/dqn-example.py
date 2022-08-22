@@ -183,10 +183,10 @@ def train(args, env, agent, writer):
             if done:
                 #ewma = Exponentially Weighted Moving-Average
                 ewma_reward = 0.05 * total_reward + (1 - 0.05) * ewma_reward
-                writer.add_scalar('Train/Episode Reward', total_reward,
-                                  total_steps)
-                writer.add_scalar('Train/Ewma Reward', ewma_reward,
-                                  total_steps)
+                # writer.add_scalar('Train/Episode Reward', total_reward,
+                #                   total_steps)
+                # writer.add_scalar('Train/Ewma Reward', ewma_reward,
+                #                   total_steps)
                 print(
                     'Step: {}\tEpisode: {}\tLength: {:3d}\tTotal reward: {:.2f}\tEwma reward: {:.2f}\tEpsilon: {:.3f}'
                     .format(total_steps, episode, t, total_reward, ewma_reward,
@@ -219,7 +219,7 @@ def test(args, env, agent, writer):
             total_reward += reward
         # ...
             if done:
-                writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
+                # writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
                 print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
                 rewards.append(total_reward)
                 break
@@ -256,7 +256,8 @@ def main():
     ## main ##
     env = gym.make('LunarLander-v2')
     agent = DQN(args)
-    writer = SummaryWriter(args.logdir)
+    # writer = SummaryWriter(args.logdir)
+    writer = 1
     if not args.test_only:
         train(args, env, agent, writer)
         agent.save(args.model)

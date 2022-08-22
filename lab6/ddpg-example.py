@@ -303,7 +303,8 @@ def main():
     ## main ##
     env = gym.make('LunarLanderContinuous-v2')
     agent = DDPG(args)
-    writer = SummaryWriter(args.logdir)
+    # writer = SummaryWriter(args.logdir)
+    writer = 1
     if not args.test_only:
         train(args, env, agent, writer)
         agent.save(args.model)
