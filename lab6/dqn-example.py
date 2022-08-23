@@ -69,7 +69,7 @@ class DQN:
         ## TODO ##
         # self._behavior_net = nn.DataParallel(self._behavior_net)
         # self._target_net = nn.DataParallel(self._target_net)
-        self._optimizer = torch.optim.Adam(self._behavior_net.parameters(),args.lr)
+        self._optimizer = torch.optim.SGD(self._behavior_net.parameters())
         # self._optimizer = nn.DataParallel(self._optimizer).module
         # raise NotImplementedError
         # memory
@@ -160,6 +160,7 @@ def train(args, env, agent, writer):
     action_space = env.action_space
     total_steps, epsilon = 0, 1.
     ewma_reward = 0
+    best_rewards = 0
     for episode in range(args.episode):
         total_reward = 0
         state = env.reset()
@@ -182,16 +183,22 @@ def train(args, env, agent, writer):
             total_steps += 1
             if done:
                 #ewma = Exponentially Weighted Moving-Average
-                ewma_reward = 0.05 * total_reward + (1 - 0.05) * ewma_reward
+                # ewma_reward = 0.05 * total_reward + (1 - 0.05) * ewma_reward
                 # writer.add_scalar('Train/Episode Reward', total_reward,
                 #                   total_steps)
                 # writer.add_scalar('Train/Ewma Reward', ewma_reward,
                 #                   total_steps)
-                print(
-                    'Step: {}\tEpisode: {}\tLength: {:3d}\tTotal reward: {:.2f}\tEwma reward: {:.2f}\tEpsilon: {:.3f}'
-                    .format(total_steps, episode, t, total_reward, ewma_reward,
-                            epsilon))
+                # print(
+                #     'Step: {}\tEpisode: {}\tLength: {:3d}\tTotal reward: {:.2f}\tEwma reward: {:.2f}\tEpsilon: {:.3f}'
+                #     .format(total_steps, episode, t, total_reward, ewma_reward,
+                #             epsilon))
                 break
+        if episode % 10 == 0:
+            testing_rewards = test(args,env,agent,writer)
+            if testing_rewards > best_rewards:
+                best_rewards = testing_rewards
+                path = "/lab6/dqn/dpn_{}".format(testing_rewards)
+                agent.save(path)
     env.close()
 
 
@@ -225,8 +232,10 @@ def test(args, env, agent, writer):
                 break
         #         ...
         # raise NotImplementedError
+    avg_rewards = np.mean(rewards) / 30.0
     print('Average Reward', np.mean(rewards))
     env.close()
+    return avg_rewards
 
 
 def main():
@@ -260,7 +269,7 @@ def main():
     writer = 1
     if not args.test_only:
         train(args, env, agent, writer)
-        agent.save(args.model)
+        # agent.save(args.model)
     agent.load(args.model)
     test(args, env, agent, writer)
 
