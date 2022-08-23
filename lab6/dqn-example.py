@@ -160,7 +160,7 @@ def train(args, env, agent, writer):
     action_space = env.action_space
     total_steps, epsilon = 0, 1.
     ewma_reward = 0
-    best_rewards = 0
+    best_rewards = 8
     for episode in range(args.episode):
         total_reward = 0
         state = env.reset()
