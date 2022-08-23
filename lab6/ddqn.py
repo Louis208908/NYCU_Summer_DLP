@@ -209,7 +209,7 @@ def train(args, env, agent, writer):
             testing_rewards = test(args,env,agent,writer)
             if testing_rewards > best_rewards:
                 best_rewards = testing_rewards
-                path = "/lab6/dqn/dpn_{}".format(testing_rewards)
+                path = "/lab6/dqn/ddqn_{}".format(testing_rewards)
                 agent.save(path)
     env.close()
 
