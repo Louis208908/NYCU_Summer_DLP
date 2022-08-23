@@ -117,6 +117,11 @@ class DQN:
            q_next = torch.max(self._target_net(next_state), dim=1)[0].unsqueeze(dim=1)
            # compute q value of next state with done flag
            q_target = reward + gamma * q_next * (1 - done)
+        '''
+        q_value是選擇當下action後得到的reward
+        q_target是指理論上從這個state出發後可以獲得的最大reward
+        以這個來算loss表示的是我們選擇action時產生的錯誤造成沒有獲得最大的reward
+        '''
         criterion = nn.MSELoss()
         loss = criterion(q_value, q_target)
         # raise NotImplementedError
