@@ -227,7 +227,7 @@ def test(args, env, agent, writer):
         # ...
             if done:
                 # writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
-                print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
+                # print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
                 rewards.append(total_reward)
                 break
         #         ...
