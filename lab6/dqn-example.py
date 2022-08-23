@@ -272,7 +272,8 @@ def main():
         train(args, env, agent, writer)
         # agent.save(args.model)
     agent.load(args.model)
-    test(args, env, agent, writer)
+    avg_rewards = test(args, env, agent, writer)
+    print("avg rewards:{}".format(avg_rewards))
 
 
 if __name__ == '__main__':
