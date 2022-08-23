@@ -59,8 +59,11 @@ class DQN:
         self._behavior_net = Net().to(args.device)
         self._target_net = Net().to(args.device)
         '''
-        behavior network is the network that is used to choose actions
-        target network is the network that is used to predict q values
+        behavior_net use to select action while training
+        target_net use to hold the target, cuz behavior_net changes frequently
+        but it's not what we expected since frequently change target will also affect our performance
+        target_net得到的Q會是我們更新用的指標，behavior net是我們主要更新的對象，也是決定action的對象
+        如果沒有target_net 單純只用behavior net的話，頻繁更新behavior net會使得我們作為指標的Q不斷更新，造成性能受影響
         '''
 
 
