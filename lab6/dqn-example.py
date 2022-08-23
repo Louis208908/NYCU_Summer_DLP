@@ -194,6 +194,7 @@ def train(args, env, agent, writer):
                 #             epsilon))
                 break
         if episode % 10 == 0:
+            print("episode:{}".format(episode))
             testing_rewards = test(args,env,agent,writer)
             if testing_rewards > best_rewards:
                 best_rewards = testing_rewards
