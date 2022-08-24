@@ -236,15 +236,15 @@ def train(args, env, agent, writer):
             total_reward += reward
             total_steps += 1
             if done:
-                ewma_reward = 0.05 * total_reward + (1 - 0.05) * ewma_reward
+                # ewma_reward = 0.05 * total_reward + (1 - 0.05) * ewma_reward
                 # writer.add_scalar('Train/Episode Reward', total_reward,
                 #                   total_steps)
                 # writer.add_scalar('Train/Ewma Reward', ewma_reward,
                 #                   total_steps)
-                print(
-                    'Step: {}\tEpisode: {}\tLength: {:3d}\tTotal reward: {:.2f}\tEwma reward: {:.2f}'
-                    .format(total_steps, episode, t, total_reward,
-                            ewma_reward))
+                # print(
+                #     'Step: {}\tEpisode: {}\tLength: {:3d}\tTotal reward: {:.2f}\tEwma reward: {:.2f}'
+                #     .format(total_steps, episode, t, total_reward,
+                #             ewma_reward))
                 break
     env.close()
 
@@ -275,7 +275,7 @@ def test(args, env, agent, writer):
                 break;
         #         ...
         # raise NotImplementedError
-    print('Average Reward', np.mean(rewards))
+    print('Average Reward', np.mean(rewards) / 30.0)
     env.close()
 
 
@@ -292,7 +292,7 @@ def main():
     parser.add_argument('--capacity', default=500000, type=int)
     parser.add_argument('--lra', default=1e-3, type=float)
     parser.add_argument('--lrc', default=1e-3, type=float)
-    parser.add_argument('--gamma', default=.99, type=float)
+    parser.add_argument('--gamma', default=.9, type=float)
     parser.add_argument('--tau', default=.005, type=float)
     # test
     parser.add_argument('--test_only', action='store_true')
