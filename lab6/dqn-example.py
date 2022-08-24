@@ -202,14 +202,14 @@ def train(args, env, agent, writer):
                 #     .format(total_steps, episode, t, total_reward, ewma_reward,
                 #             epsilon))
                 break
-        # if episode % 10 == 0:
-        #     testing_rewards = test(args,env,agent,writer)
-        #     print("episode:{}, avg_rewards:{}".format(episode, testing_rewards))
-        #     if testing_rewards > best_rewards:
-        #         best_rewards = testing_rewards
-        #         print("get a better rewards:{}".format(testing_rewards))
-        #         path = "./lab6/dqn/dqn_{}.pth".format(testing_rewards)
-        #         agent.save(path)
+        if episode % 10 == 0:
+            testing_rewards = test(args,env,agent,writer)
+            print("episode:{}, avg_rewards:{}".format(episode, testing_rewards))
+            if testing_rewards > best_rewards:
+                best_rewards = testing_rewards
+                print("get a better rewards:{}".format(testing_rewards))
+                path = "./lab6/dqn/dqn_{}.pth".format(testing_rewards)
+                agent.save(path)
     env.close()
 
 
