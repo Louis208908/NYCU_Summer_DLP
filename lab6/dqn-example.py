@@ -202,8 +202,8 @@ def train(args, env, agent, writer):
                 #             epsilon))
                 break
         if episode % 10 == 0:
-            print("episode:{}".format(episode))
             testing_rewards = test(args,env,agent,writer)
+            print("episode:{}, avg_rewards:{}".format(episode, testing_rewards))
             if testing_rewards > best_rewards:
                 best_rewards = testing_rewards
                 print("get a better rewards:{}".format(testing_rewards))
