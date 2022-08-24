@@ -210,7 +210,7 @@ def train(args, env, agent, writer):
             if testing_rewards > best_rewards:
                 best_rewards = testing_rewards
                 print("get a better rewards:{}".format(testing_rewards))
-                path = "./lab6/dqn/ddqn_{}".format(testing_rewards)
+                path = "./lab6/dqn/ddqn_{}.pth".format(testing_rewards)
                 agent.save(path)
     env.close()
 
@@ -282,7 +282,7 @@ def main():
     writer = 1
     if not args.test_only:
         train(args, env, agent, writer)
-        # agent.save(args.model)
+        agent.save(args.model)
     agent.load(args.model)
     avg_rewards = test(args, env, agent, writer)
     print("avg rewards:{}".format(avg_rewards))
