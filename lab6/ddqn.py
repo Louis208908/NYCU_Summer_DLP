@@ -246,7 +246,7 @@ def test(args, env, agent, writer):
         #         ...
         # raise NotImplementedError
     avg_rewards = np.mean(rewards) / 30.0
-    print('Average Reward', np.mean(rewards) / 30.0)
+    # print('Average Reward', np.mean(rewards) / 30.0)
     env.close()
     return avg_rewards
 
