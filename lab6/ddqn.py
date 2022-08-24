@@ -171,7 +171,7 @@ def train(args, env, agent, writer):
     action_space = env.action_space
     total_steps, epsilon = 0, 1.
     ewma_reward = 0
-    best_rewards = 5.0
+    best_rewards = 8.5
     for episode in range(args.episode):
         total_reward = 0
         state = env.reset()
@@ -210,7 +210,7 @@ def train(args, env, agent, writer):
             if testing_rewards > best_rewards:
                 best_rewards = testing_rewards
                 print("get a better rewards:{}".format(testing_rewards))
-                path = "./lab6/dqn/ddqn_{}.pth".format(testing_rewards)
+                path = "./lab6/dqn/ddqn_R_{}_LR_{}_Batch_{}.pth".format(testing_rewards,args.lr,args.batch_size)
                 agent.save(path)
     env.close()
 
