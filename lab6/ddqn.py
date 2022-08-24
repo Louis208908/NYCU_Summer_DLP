@@ -210,7 +210,7 @@ def train(args, env, agent, writer):
             if testing_rewards > best_rewards:
                 best_rewards = testing_rewards
                 print("get a better rewards:{}".format(testing_rewards))
-                path = "./lab6/dqn/dqn_R_{}_LR_{}_Batch_{}_G_{}.pth".format(testing_rewards,args.lr,args.batch_size,args.gamma)
+                path = "./lab6/ddqn/dqn_R_{}_LR_{}_Batch_{}_G_{}.pth".format(testing_rewards,args.lr,args.batch_size,args.gamma)
                 agent.save(path)
     env.close()
 
