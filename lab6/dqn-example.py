@@ -168,7 +168,7 @@ def train(args, env, agent, writer):
     action_space = env.action_space
     total_steps, epsilon = 0, 1.
     ewma_reward = 0
-    best_rewards = 8
+    best_rewards = 5.0
     for episode in range(args.episode):
         total_reward = 0
         state = env.reset()
@@ -243,7 +243,7 @@ def test(args, env, agent, writer):
         #         ...
         # raise NotImplementedError
     avg_rewards = np.mean(rewards) / 30.0
-    # print('Average Reward', np.mean(rewards))
+    print('Average Reward', np.mean(rewards) / 30.0)
     env.close()
     return avg_rewards
 
@@ -262,7 +262,7 @@ def main():
     parser.add_argument('--lr', default=.0005, type=float)
     parser.add_argument('--eps_decay', default=.995, type=float)
     parser.add_argument('--eps_min', default=.01, type=float)
-    parser.add_argument('--gamma', default=.99, type=float)
+    parser.add_argument('--gamma', default=.9, type=float)
     parser.add_argument('--freq', default=4, type=int)
     parser.add_argument('--target_freq', default=1000, type=int)
     # test
