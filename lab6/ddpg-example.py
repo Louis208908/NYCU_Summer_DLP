@@ -216,6 +216,7 @@ def train(args, env, agent, writer):
     print('Start Training')
     total_steps = 0
     ewma_reward = 0
+    best_rewards = 8.5
     for episode in range(args.episode):
         total_reward = 0
         state = env.reset()
