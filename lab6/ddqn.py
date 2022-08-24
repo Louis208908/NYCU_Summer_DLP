@@ -282,7 +282,7 @@ def main():
     writer = 1
     if not args.test_only:
         train(args, env, agent, writer)
-        agent.save(args.model)
+        # agent.save(args.model)
     agent.load(args.model)
     avg_rewards = test(args, env, agent, writer)
     print("avg rewards:{}".format(avg_rewards))
