@@ -237,8 +237,8 @@ def train(args, env, agent, writer):
             total_steps += 1
             if done:
                 # ewma_reward = 0.05 * total_reward + (1 - 0.05) * ewma_reward
-                # writer.add_scalar('Train/Episode Reward', total_reward,
-                #                   total_steps)
+                writer.add_scalar('Train/Episode Reward', total_reward,
+                                  episode)
                 # writer.add_scalar('Train/Ewma Reward', ewma_reward,
                 #                   total_steps)
                 # print(
@@ -246,6 +246,14 @@ def train(args, env, agent, writer):
                 #     .format(total_steps, episode, t, total_reward,
                 #             ewma_reward))
                 break
+        if episode % 10 == 0:
+            testing_rewards = test(args,env,agent,writer)
+            print("episode:{}, avg_rewards:{}".format(episode, testing_rewards))
+            if testing_rewards > best_rewards:
+                best_rewards = testing_rewards
+                print("get a better rewards:{}".format(testing_rewards))
+                path = "./lab6/ddpg/ddpg_R_{}_LR_{}_Batch_{}_G_{}.pth".format(testing_rewards,args.lr,args.batch_size,args.gamma)
+                agent.save(path)
     env.close()
 
 
@@ -292,7 +300,7 @@ def main():
     parser.add_argument('--capacity', default=500000, type=int)
     parser.add_argument('--lra', default=1e-3, type=float)
     parser.add_argument('--lrc', default=1e-3, type=float)
-    parser.add_argument('--gamma', default=.9, type=float)
+    parser.add_argument('--gamma', default=.99, type=float)
     parser.add_argument('--tau', default=.005, type=float)
     # test
     parser.add_argument('--test_only', action='store_true')
@@ -303,12 +311,12 @@ def main():
     ## main ##
     env = gym.make('LunarLanderContinuous-v2')
     agent = DDPG(args)
-    # writer = SummaryWriter(args.logdir)
-    writer = 1
+    writer = SummaryWriter(args.logdir)
+    # writer = 1
     if not args.test_only:
         train(args, env, agent, writer)
-        agent.save(args.model)
-    agent.load(args.model)
+        # agent.save(args.model)
+    # agent.load(args.model)
     test(args, env, agent, writer)
 
 
