@@ -283,8 +283,8 @@ def test(args, env, agent, writer):
                 # writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
                 if args.test_only:
                     print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
-                # if total_reward > 290:
-                #     print("seed = {}".format(seed))
+                if total_reward > 290:
+                    print("seed = {}".format(seed))
                 rewards.append(total_reward)
                 break;
         #         ...
