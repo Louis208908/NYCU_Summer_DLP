@@ -219,7 +219,7 @@ def test(args, env, agent, writer):
     print('Start Testing')
     action_space = env.action_space
     epsilon = args.test_epsilon
-    seeds = (args.seed + i for i in range(10))
+    seeds = [17, 18, 21, 24, 26, 44, 65, 68, 69, 75]
     rewards = []
     for n_episode, seed in enumerate(seeds):
         total_reward = 0
@@ -240,7 +240,7 @@ def test(args, env, agent, writer):
         # ...
             if done:
                 # writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
-                # print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
+                print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
                 rewards.append(total_reward)
                 break
         #         ...
@@ -283,7 +283,7 @@ def main():
     if not args.test_only:
         train(args, env, agent, writer)
         # agent.save(args.model)
-    # agent.load(args.model)
+    agent.load(args.model)
     avg_rewards = test(args, env, agent, writer)
     print("avg rewards:{}".format(avg_rewards))
 

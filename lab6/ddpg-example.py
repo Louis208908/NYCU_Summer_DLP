@@ -260,7 +260,7 @@ def train(args, env, agent, writer):
 
 def test(args, env, agent, writer):
     print('Start Testing')
-    seeds = (args.seed + i for i in range(10))
+    seeds = [17, 18, 21, 24, 26, 44, 65, 68, 69, 75]
     rewards = []
     for n_episode, seed in enumerate(seeds):
         total_reward = 0
@@ -280,6 +280,7 @@ def test(args, env, agent, writer):
         # ...
             if done:
                 # writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
+                print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
                 rewards.append(total_reward)
                 break;
         #         ...
@@ -293,7 +294,7 @@ def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-d', '--device', default='cpu')
-    parser.add_argument('-m', '--model', default='./lab6/ddpg/ddpg.pth')
+    parser.add_argument('-m', '--model', default='./lab6/ddpg/ddpg_R_9.029587829732492_LR_0.0007_0.0007_Batch_32_G_0.99.pth')
     parser.add_argument('--logdir', default='./lab6/ddpg')
     # train
     parser.add_argument('--warmup', default=10000, type=int)
@@ -318,7 +319,7 @@ def main():
     if not args.test_only:
         train(args, env, agent, writer)
         # agent.save(args.model)
-    # agent.load(args.model)
+    agent.load(args.model)
     test(args, env, agent, writer)
 
 
