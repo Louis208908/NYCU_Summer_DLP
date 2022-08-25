@@ -299,7 +299,7 @@ def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-d', '--device', default='cpu')
-    parser.add_argument('-m', '--model', default='./lab6/ddpg/ddpg_R_9.029587829732492_LR_0.0007_0.0007_Batch_32_G_0.99.pth')
+    parser.add_argument('-m', '--model', default='./lab6/ddpg/ddpg_R_9.291592088209178_LR_0.001_0.001_Batch_64_G_0.99.pth')
     parser.add_argument('--logdir', default='./lab6/ddpg')
     # train
     parser.add_argument('--warmup', default=10000, type=int)
