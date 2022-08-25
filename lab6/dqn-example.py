@@ -239,7 +239,8 @@ def test(args, env, agent, writer):
         # ...
             if done:
                 # writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
-                print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
+                if args.test_only:
+                    print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
                 rewards.append(total_reward)
                 break
         #         ...
@@ -284,7 +285,8 @@ def main():
         # agent.save(args.model)
     agent.load(args.model)
     avg_rewards = test(args, env, agent, writer)
-    print("avg rewards:{}".format(avg_rewards))
+    if args.test_only:
+        print("avg rewards:{}".format(avg_rewards))
 
 
 if __name__ == '__main__':
