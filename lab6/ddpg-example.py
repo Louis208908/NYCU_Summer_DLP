@@ -260,8 +260,8 @@ def train(args, env, agent, writer):
 
 def test(args, env, agent, writer):
     print('Start Testing')
-    seeds = (args.seed + i for i in range(10))
-    # seeds = [17, 18, 21, 24, 26, 44, 65, 68, 69, 75]
+    # seeds = (args.seed + i for i in range(10))
+    seeds = [6,8,9,12,13,16,17,21,23,33]
     rewards = []
     for n_episode, seed in enumerate(seeds):
         total_reward = 0
