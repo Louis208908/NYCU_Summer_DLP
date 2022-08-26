@@ -160,7 +160,7 @@ class TD3:
         with torch.no_grad():
             noise = torch.ones_like(action).data.normal_(0,args.policy_noise).to(self.device).clamp(-args.noise_clip, args.noise_clip)
             a_next = (self._target_actor_net(next_state) + noise).clamp(-self.max_action,self.max_action)
-            q_next = min(self._target_critic_net1(next_state, a_next), self._target_critic_net2(next_state,a_next))
+            q_next = torch.min(self._target_critic_net1(next_state, a_next), self._target_critic_net2(next_state,a_next))
             q_target = reward + gamma * q_next * (1 - done)
         criterion = nn.MSELoss()
         critic_loss1 = criterion(q_value1, q_target)
