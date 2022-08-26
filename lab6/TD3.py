@@ -305,8 +305,8 @@ def test(args, env, agent, writer):
                 writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
                 if args.test_only:
                     print('Episode: {}\tTotal reward: {:.2f}'.format(n_episode, total_reward))
-                # if total_reward > 290:
-                #     print("seed = {}".format(seed))
+                if total_reward > 290:
+                    print("seed = {}".format(seed))
                 rewards.append(total_reward)
                 break;
         #         ...
@@ -321,7 +321,7 @@ def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-d', '--device', default='cpu')
-    parser.add_argument('-m', '--model', default='./lab6/TD3/TD3.pth')
+    parser.add_argument('-m', '--model', default='./lab6/TD3/TD3_R_9.44804082648251_LR_0.001_0.001_Batch_64_G_0.99.pth')
     parser.add_argument('--logdir', default='./lab6/TD3')
     # train
     parser.add_argument('--warmup', default=10000, type=int)
